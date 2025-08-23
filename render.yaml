@@ -1,9 +1,14 @@
 services:
   - type: web
-    name: motivator
+    name: motivator-web
     env: python
-    buildCommand: "pip install -r requirements.txt && python init_db.py"
-    startCommand: "gunicorn app:app"
+    buildCommand: "pip install -r requirements.txt && python Motivator/init_db.py"
+    startCommand: gunicorn Motivator.app:app --workers=2 --threads=4 --timeout=120
     envVars:
       - key: FLASK_ENV
         value: production
+  - type: worker
+    name: motivator-scheduler
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python Motivator/run_scheduler.py
