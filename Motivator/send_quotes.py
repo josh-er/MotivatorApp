@@ -1,104 +1,67 @@
-# Motivator/send_quotes.py
 import csv
 import random
-import time
+import logging
 from datetime import datetime
-from twilio.rest import Client
-from dotenv import load_dotenv
-import os
-import sqlite3
-import tempfile
-import shutil
-from pathlib import Path
-from log_sms import log_message  # use your logger
+from send_sms import send_sms  # Twilio wrapper
 
-SENT_LOG_FILE = "sent_log.csv"
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Config
+TESTING = True # Set False in production
+TEST_NUMBER = "+18585313930"  # Your number for testing (set None to disable override)
 
 def send_quotes():
-    load_dotenv()
-    TWILIO_SID = os.getenv("TWILIO_SID")
-    TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
-
-    client = Client(TWILIO_SID, TWILIO_AUTH_TOKEN)
-
     now = datetime.now()
-    current_time_str = now.strftime("%H:%M")
-    today_str = now.strftime("%Y-%m-%d")
+    current_time = now.strftime("%H:%M")
+    today = now.date()
 
-    print(f"Checking for users scheduled at {current_time_str}")
+    logger.info("Running scheduled send_quotes()")
+    logger.info(f"Checking for users scheduled at {current_time}")
 
-    def already_sent_today(phone):
-        """Check if we already sent to this phone today."""
-        if not Path(SENT_LOG_FILE).exists():
-            return False
-        with open(SENT_LOG_FILE, newline="") as f:
-            reader = csv.reader(f)
-            return any(row and row[0].startswith(today_str) and row[1] == phone for row in reader)
+    with open("submissions.csv", newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+        users = [row for row in reader if row["time"] == current_time]
 
-    def mark_as_sent(phone, quote, status="success", error=None):
-        """Mark a phone number as sent to today + log the result."""
-        log_message(phone, quote, status, error)
+    logger.info(f"Found {len(users)} user(s) to message.")
 
-    def send_quote_to_user(phone, quote):
-        try:
-            client.messages.create(
-                body=quote,
-                from_=TWILIO_PHONE_NUMBER,
-                to=phone
-            )
-            print(f"Sent to {phone}: {quote}")
-            mark_as_sent(phone, quote, "success")
-        except Exception as e:
-            print(f"Failed to send to {phone}: {e}")
-            mark_as_sent(phone, quote, "error", str(e))
+    if not users:
+        return
 
-    scheduled_users = []
-    with open("submissions.csv", newline="") as f:
-        reader = csv.reader(f)
-        next(reader, None)  # skip header row
-        for row in reader:
-            if len(row) < 2:
-                continue
+    # Load quotes
+    with open("quotes.txt") as f:
+        quotes = [line.strip() for line in f if line.strip()]
 
-            phone = row[0]
-            preferred_time = row[1]
-            last_sent = row[2] if len(row) > 2 else ""
+    for user in users:
+        phone = user["phone"]
+        last_sent = user.get("last_sent", "").strip()
 
-            if preferred_time == current_time_str and last_sent != today_str:
-                scheduled_users.append((phone, preferred_time, last_sent))
+        # Testing override: only send to TEST_NUMBER
+        if TEST_NUMBER and phone != TEST_NUMBER:
+            logger.info(f"Skipping {phone}, not TEST_NUMBER override.")
+            continue
 
-    print(f"Found {len(scheduled_users)} user(s) to message.")
+        # Production safeguard: don't send more than once per day
+        if not TESTING and last_sent:
+            try:
+                last_date = datetime.strptime(last_sent, "%Y-%m-%d").date()
+                if last_date == today:
+                    logger.info(f"Skipping {phone}, already sent today.")
+                    continue
+            except ValueError:
+                pass
 
-    # Safely update submissions.csv with new last_sent values
-    with open("submissions.csv", newline="") as infile, tempfile.NamedTemporaryFile("w", delete=False, newline="") as outfile:
-        reader = csv.reader(infile)
-        writer = csv.writer(outfile)
+        # Pick and send a random quote
+        quote = random.choice(quotes)
+        send_sms(phone, quote)
+        logger.info(f"Sent to {phone}: {quote}")
 
-        header = next(reader, None)
-        if header:
-            writer.writerow(header)
+        # Update last_sent in CSV
+        user["last_sent"] = today.strftime("%Y-%m-%d")
 
-        for row in reader:
-            if len(row) < 2:
-                writer.writerow(row)
-                continue
-
-            phone, preferred_time = row[0], row[1]
-            last_sent = row[2] if len(row) > 2 else ""
-
-            if preferred_time == current_time_str and not already_sent_today(phone):
-                # Fetch random quote
-                conn = sqlite3.connect("quotes.db")
-                cursor = conn.cursor()
-                cursor.execute("SELECT text FROM quotes ORDER BY RANDOM() LIMIT 1")
-                result = cursor.fetchone()
-                quote = result[0] if result else "Stay strong."
-                conn.close()
-
-                send_quote_to_user(phone, quote)
-                row = [phone, preferred_time, today_str]  # update last_sent
-
-            writer.writerow(row)
-
-    shutil.move(outfile.name, "submissions.csv")
+    # Write updates back to CSV
+    fieldnames = ["phone", "time", "last_sent"]
+    with open("submissions.csv", "w", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(users)

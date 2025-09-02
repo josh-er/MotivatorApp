@@ -13,11 +13,10 @@ CREATE TABLE IF NOT EXISTS quotes (
 
 # Add starter quotes (UNIQUE ensures no duplicates)
 quotes = [
-    ("You've got this.",),
-    ("Keep going. You're closer than you think.",),
-    ("Small steps add up.",),
-    ("Consistency > intensity.",),
-    ("You can tell who really bout this Family Guy shit and who not.",)
+    ("Why do we feen Master Bruce? So we can chief that skrong. - Motivator",),
+    ("Wax melts when heated so it can serve another purpose. Are you heated? - Motivator",),
+    ("Jarvis, give this fella props because they're grinding for the life they want. - Motivator",),
+    ("You can tell who really bout this Family Guy shit and who not. - Motivator",)
 ]
 
 cursor.executemany("INSERT OR IGNORE INTO quotes (text) VALUES (?)", quotes)
