@@ -1,29 +1,31 @@
-from flask import Flask, render_template, request, redirect
-import csv
-from datetime import datetime
+from flask import Flask, request, jsonify
+from db import SessionLocal, Base, engine
+from models import User
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 
-CSV_FILE = 'submissions.csv'
+# Make sure DB tables exist (only needed once in dev; Render will handle migrations)
+Base.metadata.create_all(bind=engine)
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
-        phone = request.form.get("phone")
-        time_str = request.form.get("time")
+@app.route("/")
+def home():
+    return "Motivator is running!"
 
-        # Basic validation
-        if not phone or not time_str:
-            return "Missing info", 400
+@app.route("/submit", methods=["POST"])
+def submit():
+    data = request.json
+    phone = data.get("phone")
+    time = data.get("time")
 
-        # Save to CSV
-        with open(CSV_FILE, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([phone, time_str, datetime.now().isoformat()])
-
-        return redirect("/")  # Redirect after submission
-
-    return render_template("index.html")
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    db = SessionLocal()
+    try:
+        user = User(phone=phone, time=time, last_sent=None)
+        db.add(user)
+        db.commit()
+        return jsonify({"status": "success"}), 201
+    except IntegrityError:
+        db.rollback()
+        return jsonify({"status": "error", "message": "User already exists"}), 400
+    finally:
+        db.close()

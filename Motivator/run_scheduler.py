@@ -1,20 +1,38 @@
-# Motivator/run_scheduler.py
 import logging
-from apscheduler.schedulers.blocking import BlockingScheduler
-from send_quotes import send_quotes  # your main SMS + logging function
-import pytz
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
+from send_sms import send_sms
+from db import SessionLocal
+from models import User
 
-# --- Setup ---
 logging.basicConfig(level=logging.INFO)
-scheduler = BlockingScheduler(timezone=pytz.timezone("US/Eastern"))
+scheduler = BackgroundScheduler()
 
-# --- Scheduler Job ---
-@scheduler.scheduled_job("interval", minutes=1)  # for testing locally
-def daily_job():
-    logging.info("⏱ Running scheduled send_quotes()")
-    send_quotes()
+def send_quotes():
+    now = datetime.now().strftime("%H:%M")
+    logging.info(f"Checking for users scheduled at {now}")
+    db = SessionLocal()
+    users = db.query(User).filter(User.time == now).all()
 
-# --- Entry Point ---
+    logging.info(f"Found {len(users)} user(s) to message.")
+
+    for user in users:
+        if user.last_sent == datetime.now().date():
+            continue  # already sent today
+
+        # send SMS
+        send_sms(user.phone, "Here’s your motivational quote for today!")
+
+        # update last_sent
+        user.last_sent = datetime.now().date()
+        db.commit()
+
+    db.close()
+
+scheduler.add_job(send_quotes, "interval", minutes=1)
+scheduler.start()
+
 if __name__ == "__main__":
-    logging.info("🌀 Motivator scheduler started (Ctrl+C to stop)")
-    scheduler.start()
+    import time
+    while True:
+        time.sleep(1)
