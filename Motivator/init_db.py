@@ -1,26 +1,28 @@
-import sqlite3
+# init_db.py
+from db import engine, SessionLocal
+from models import Base, Quote
 
-conn = sqlite3.connect("quotes.db")
-cursor = conn.cursor()
+# Create all tables
+Base.metadata.create_all(bind=engine)
 
-# Create the quotes table
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS quotes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    text TEXT NOT NULL UNIQUE
-)
-""")
-
-# Add starter quotes (UNIQUE ensures no duplicates)
+# Starter quotes
 quotes = [
-    ("Why do we feen Master Bruce? So we can chief that skrong. - Motivator",),
-    ("Wax melts when heated so it can serve another purpose. Are you heated? - Motivator",),
-    ("Jarvis, give this fella props because they're grinding for the life they want. - Motivator",),
-    ("You can tell who really bout this Family Guy shit and who not. - Motivator",)
+    "Why do we feen Master Bruce? So we can chief that skrong. - Motivator",
+    "Wax melts when heated so it can serve another purpose. Are you melting or becoming something new? - Motivator",
+    "Jarvis, give this fella props because they're grinding for the life they want. - Motivator",
+    "You can tell who really bout this Fammy Guy shit and who not. - Motivator",
+    "I'm the motivational quote guy! Consider this your motivational quote! Oy vey. - Motivator"
 ]
 
-cursor.executemany("INSERT OR IGNORE INTO quotes (text) VALUES (?)", quotes)
-conn.commit()
-conn.close()
+def seed_quotes():
+    db = SessionLocal()
+    for q in quotes:
+        # Add only if not already present
+        if not db.query(Quote).filter_by(text=q).first():
+            db.add(Quote(text=q))
+    db.commit()
+    db.close()
+    print("Quotes table initialized and seeded.")
 
-print("✅ quotes.db initialized and seeded.")
+if __name__ == "__main__":
+    seed_quotes()
