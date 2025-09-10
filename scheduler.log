@@ -1,0 +1,4 @@
+2025-09-08 01:06:09,857 [INFO] Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-08 01:06:09,858 [INFO] Added job "send_quotes" to job store "default"
+2025-09-08 01:06:09,859 [INFO] Scheduler started
+2025-09-08 01:06:09,859 [INFO] Scheduler started. Running every 1 minute.

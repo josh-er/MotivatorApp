@@ -8,7 +8,7 @@ def seed():
         # Replace with your own phone and preferred time
         test_user = User(
             phone="+18585313930",   # your number
-            time="13:42",           # use a near-future HH:MM for testing
+            time="22:29",           # use a near-future HH:MM for testing
             last_sent=None
         )
 

@@ -1,9 +1,5 @@
-# init_db.py
 from db import engine, SessionLocal
 from models import Base, Quote
-
-# Create all tables
-Base.metadata.create_all(bind=engine)
 
 # Starter quotes
 quotes = [
@@ -14,6 +10,12 @@ quotes = [
     "I'm the motivational quote guy! Consider this your motivational quote! Oy vey. - Motivator"
 ]
 
+def init_db():
+    # WARNING: this wipes all existing tables/data
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    print("Database schema reset and created.")
+
 def seed_quotes():
     db = SessionLocal()
     for q in quotes:
@@ -22,7 +24,8 @@ def seed_quotes():
             db.add(Quote(text=q))
     db.commit()
     db.close()
-    print("Quotes table initialized and seeded.")
+    print("Quotes table seeded.")
 
 if __name__ == "__main__":
+    init_db()
     seed_quotes()
