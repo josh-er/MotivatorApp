@@ -3,18 +3,10 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///motivator.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # path to Motivator/
+DB_PATH = os.path.join(BASE_DIR, "motivator.db")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-)
-
+engine = create_engine(f"sqlite:///{DB_PATH}")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
-
-from models import Base
-
-# Create tables if they don’t exist
-Base.metadata.create_all(bind=engine)
