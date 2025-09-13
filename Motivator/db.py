@@ -10,3 +10,6 @@ engine = create_engine(f"sqlite:///{DB_PATH}")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# relative import so package execution works
+from .models import User, Quote  # noqa: E402
