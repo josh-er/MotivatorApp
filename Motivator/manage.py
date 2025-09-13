@@ -2,10 +2,11 @@
 import argparse
 from .db import SessionLocal
 from .models import User, Quote
+from .send_quotes import send_now
 
 def add_user(phone, schedule_time=None):
     db = SessionLocal()
-    user = User(phone=phone, schedule_time=schedule_time)
+    user = User(phone=phone, time=schedule_time)
     db.add(user)
     db.commit()
     db.close()
@@ -18,7 +19,7 @@ def list_users():
         print("No users found.")
     else:
         for u in users:
-            print(f"- {u.phone} @ {u.schedule_time}")
+            print(f"- {u.phone} @ {u.time}")
     db.close()
 
 def remove_user(phone):
@@ -59,6 +60,10 @@ def main():
     # quote commands
     subparsers.add_parser("list_quotes", help="List all quotes")
 
+    # send_now command
+    send_now_parser = subparsers.add_parser("send_now", help="Send a quote immediately to a specific user")
+    send_now_parser.add_argument("phone", type=str, help="Phone number")
+
     args = parser.parse_args()
 
     if args.command == "add":
@@ -69,6 +74,8 @@ def main():
         remove_user(args.phone)
     elif args.command == "list_quotes":
         list_quotes()
+    elif args.command == "send_now":
+        send_now(args.phone)
     else:
         parser.print_help()
 

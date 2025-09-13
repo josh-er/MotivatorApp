@@ -10,15 +10,13 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     phone = Column(String, unique=True, index=True, nullable=False)
     time = Column(String, nullable=False)  # format "HH:MM"
-    last_sent = Column(Date, nullable=True)
-
+    last_sent = Column(Date, nullable=True)  # Track last send date
 
 class Quote(Base):
     __tablename__ = "quotes"
 
     id = Column(Integer, primary_key=True, index=True)
     text = Column(String, nullable=False)
-
 
 class MessageLog(Base):
     __tablename__ = "message_logs"

@@ -1,67 +1,99 @@
-import csv
 import random
 import logging
-from datetime import datetime
-from send_sms import send_sms  # Twilio wrapper
+from datetime import datetime, date
+from .send_sms import send_sms
+from .db import SessionLocal
+from .models import User, Quote, MessageLog
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Config
-TESTING = True # Set False in production
-TEST_NUMBER = "+18585313930"  # Your number for testing (set None to disable override)
-
 def send_quotes():
+    """Scheduled sending: send one random quote to each user whose schedule matches current time."""
     now = datetime.now()
     current_time = now.strftime("%H:%M")
-    today = now.date()
+    today = date.today()
+    logger.info(f"Running scheduled send_quotes() at {current_time}")
 
-    logger.info("Running scheduled send_quotes()")
-    logger.info(f"Checking for users scheduled at {current_time}")
+    db = SessionLocal()
+    try:
+        users = db.query(User).filter(User.time == current_time).all()
+        logger.info(f"Found {len(users)} user(s) scheduled for {current_time}")
 
-    with open("submissions.csv", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        users = [row for row in reader if row["time"] == current_time]
+        for user in users:
+            if user.last_sent == today:
+                logger.info(f"Skipping {user.phone}, already sent today")
+                continue
 
-    logger.info(f"Found {len(users)} user(s) to message.")
-
-    if not users:
-        return
-
-    # Load quotes
-    with open("quotes.txt") as f:
-        quotes = [line.strip() for line in f if line.strip()]
-
-    for user in users:
-        phone = user["phone"]
-        last_sent = user.get("last_sent", "").strip()
-
-        # Testing override: only send to TEST_NUMBER
-        if TEST_NUMBER and phone != TEST_NUMBER:
-            logger.info(f"Skipping {phone}, not TEST_NUMBER override.")
-            continue
-
-        # Production safeguard: don't send more than once per day
-        if not TESTING and last_sent:
+            quote = random.choice(db.query(Quote).all()).text
             try:
-                last_date = datetime.strptime(last_sent, "%Y-%m-%d").date()
-                if last_date == today:
-                    logger.info(f"Skipping {phone}, already sent today.")
-                    continue
-            except ValueError:
-                pass
+                send_sms(user.phone, quote)
+                logger.info(f"Sent to {user.phone}: {quote}")
 
-        # Pick and send a random quote
-        quote = random.choice(quotes)
-        send_sms(phone, quote)
-        logger.info(f"Sent to {phone}: {quote}")
+                # Update last_sent
+                user.last_sent = today
 
-        # Update last_sent in CSV
-        user["last_sent"] = today.strftime("%Y-%m-%d")
+                # Log message
+                log = MessageLog(
+                    phone=user.phone,
+                    quote=quote,
+                    status="success"
+                )
+                db.add(log)
 
-    # Write updates back to CSV
-    fieldnames = ["phone", "time", "last_sent"]
-    with open("submissions.csv", "w", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(users)
+            except Exception as e:
+                logger.error(f"Failed to send to {user.phone}: {e}")
+                log = MessageLog(
+                    phone=user.phone,
+                    quote=quote,
+                    status="failed",
+                    error=str(e)
+                )
+                db.add(log)
+
+        db.commit()
+    finally:
+        db.close()
+
+
+def send_now(phone: str):
+    """Send one random quote immediately to a specific phone (ignores schedule)."""
+    today = date.today()
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.phone == phone).first()
+
+        quotes = db.query(Quote).all()
+        if not quotes:
+            logger.warning("No quotes found in database")
+            return
+
+        quote = random.choice(quotes).text
+
+        try:
+            send_sms(phone, quote)
+            logger.info(f"[send_now] Sent to {phone}: {quote}")
+
+            if user:
+                user.last_sent = today
+
+            log = MessageLog(
+                phone=phone,
+                quote=quote,
+                status="success"
+            )
+            db.add(log)
+
+        except Exception as e:
+            logger.error(f"[send_now] Failed to send to {phone}: {e}")
+            log = MessageLog(
+                phone=phone,
+                quote=quote,
+                status="failed",
+                error=str(e)
+            )
+            db.add(log)
+
+        db.commit()
+    finally:
+        db.close()
