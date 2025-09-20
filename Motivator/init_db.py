@@ -1,12 +1,12 @@
-from db import engine, SessionLocal
-from models import Base, Quote
+from .db import engine, SessionLocal
+from .models import Base, Quote
 
 # Starter quotes
 quotes = [
     "Why do we feen Master Bruce? So we can chief that skrong. - Motivator",
     "Wax melts when heated so it can serve another purpose. Are you melting or becoming something new? - Motivator",
     "Jarvis, give this fella props because they're grinding for the life they want. - Motivator",
-    "You can tell who really bout this Fammy Guy shit and who not. - Motivator",
+    "You can tell who really bout this Fammy Guy stuff and who not. - Motivator",
     "I'm the motivational quote guy! Consider this your motivational quote! Oy vey. - Motivator"
 ]
 

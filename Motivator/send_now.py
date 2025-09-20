@@ -2,15 +2,12 @@
 import logging
 import random
 from datetime import datetime, date
-from db import SessionLocal
-from models import User, Quote, MessageLog
-from send_sms import send_sms
+from .db import SessionLocal
+from .models import User, Quote, SentQuote, MessageLog
+from .send_sms import send_sms
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Config: set to True to update user's last_sent to today after a successful send
-UPDATE_LAST_SENT = False
 
 def send_now():
     db = SessionLocal()
@@ -27,8 +24,22 @@ def send_now():
             return
 
         for user in users:
-            quote_obj = random.choice(quotes)
-            quote_text = quote_obj.text if hasattr(quote_obj, "text") else str(quote_obj)
+            # Find which quotes user already got this cycle
+            sent_quote_ids = {
+                sq.quote_id for sq in db.query(SentQuote).filter_by(user_id=user.id, cycle=user.cycle)
+            }
+
+            available_quotes = [q for q in quotes if q.id not in sent_quote_ids]
+
+            if not available_quotes:
+                # Start new cycle if all quotes sent
+                user.cycle += 1
+                db.commit()
+                available_quotes = quotes
+
+            # Pick a random available quote
+            quote_obj = random.choice(available_quotes)
+            quote_text = quote_obj.text
 
             logger.info(f"Sending to {user.phone}: {quote_text}")
 
@@ -42,39 +53,27 @@ def send_now():
                 error_text = str(e)
                 logger.error(f"Failed to send to {user.phone}: {error_text}")
 
-            # Try to create a MessageLog entry using common shapes
-            log_entry = None
-            try:
-                # Try (user_id, message)
-                log_entry = MessageLog(user_id=user.id, message=quote_text, timestamp=datetime.now())
-            except TypeError:
-                try:
-                    # Try (phone, quote, status, error, timestamp)
-                    log_entry = MessageLog(
-                        phone=user.phone,
-                        quote=quote_text,
-                        status=status,
-                        error=error_text,
-                        timestamp=datetime.now()
-                    )
-                except TypeError:
-                    try:
-                        # Try (user_id, quote) fallback
-                        log_entry = MessageLog(user_id=user.id, quote=quote_text)
-                    except Exception:
-                        log_entry = None
+            # Log in MessageLog
+            log_entry = MessageLog(
+                phone=user.phone,
+                quote=quote_text,
+                status=status,
+                error=error_text,
+                timestamp=datetime.now()
+            )
+            db.add(log_entry)
 
-            if log_entry is not None:
-                try:
-                    db.add(log_entry)
-                except Exception as e:
-                    logger.error(f"Failed to add log entry for {user.phone}: {e}")
+            # Track in SentQuote (only if success, to avoid "losing" quotes on failures)
+            if status == "success":
+                sent_entry = SentQuote(
+                    user_id=user.id,
+                    quote_id=quote_obj.id,
+                    cycle=user.cycle
+                )
+                db.add(sent_entry)
 
-            if UPDATE_LAST_SENT and status == "success":
-                try:
-                    user.last_sent = date.today()
-                except Exception as e:
-                    logger.error(f"Failed to update last_sent for {user.phone}: {e}")
+                # Update last_sent
+                user.last_sent = date.today()
 
             db.commit()
 

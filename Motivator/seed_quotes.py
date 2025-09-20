@@ -1,5 +1,5 @@
-from db import SessionLocal, engine, Base
-from models import Quote
+from .db import SessionLocal, engine, Base
+from .models import Quote
 
 # Create tables if not already created
 Base.metadata.create_all(bind=engine)
