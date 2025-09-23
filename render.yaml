@@ -7,8 +7,34 @@ services:
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: motivator-app-postgres
+          property: connectionString
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE
+        sync: false
+
   - type: worker
     name: motivator-scheduler
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: "pip install -r requirements.txt"
     startCommand: python Motivator/run_scheduler.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: motivator-app-postgres
+          property: connectionString
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE
+        sync: false
+
+databases:
+  - name: motivator-app-postgres
+    plan: free
