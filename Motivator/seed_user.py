@@ -1,6 +1,6 @@
 # Motivator/seed_user.py
-from .db import SessionLocal
-from .models import User
+from Motivator.db import SessionLocal
+from Motivator.models import User
 
 def seed():
     db = SessionLocal()

@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, date
 from sqlalchemy.orm import joinedload
 from .send_sms import send_sms
-from .db import SessionLocal
+from Motivator.db import SessionLocal
 from .models import User, Quote, MessageLog, SentQuote
 
 logging.basicConfig(level=logging.INFO)

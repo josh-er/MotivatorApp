@@ -12,4 +12,4 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # relative import so package execution works
-from .models import User, Quote  # noqa: E402
+from Motivator.models import User, Quote  # noqa: E402

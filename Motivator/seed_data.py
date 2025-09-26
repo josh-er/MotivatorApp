@@ -2,7 +2,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from .models import Base, User, Quote
+from Motivator.models import Base, User, Quote
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "motivator.db")

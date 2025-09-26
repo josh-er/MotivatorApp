@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from db import SessionLocal, Base, engine
+from Motivator.db import SessionLocal, Base, engine
 from models import User
 from sqlalchemy.exc import IntegrityError
 

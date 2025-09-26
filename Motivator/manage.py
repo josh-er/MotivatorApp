@@ -1,7 +1,7 @@
 # manage.py
 import argparse
-from .db import SessionLocal
-from .models import User, Quote
+from Motivator.db import SessionLocal
+from Motivator.models import User, Quote
 from .send_quotes import send_now
 
 def add_user(phone, schedule_time=None):

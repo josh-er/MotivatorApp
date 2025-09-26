@@ -3,7 +3,7 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from send_sms import send_sms
-from db import SessionLocal
+from Motivator.db import SessionLocal
 from models import User, Quote, MessageLog
 
 logging.basicConfig(level=logging.INFO)

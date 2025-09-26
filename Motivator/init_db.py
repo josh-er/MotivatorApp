@@ -1,5 +1,5 @@
-from .db import engine, SessionLocal
-from .models import Base, Quote
+from Motivator.db import engine, SessionLocal
+from Motivator.models import Base, Quote
 
 # Starter quotes
 quotes = [

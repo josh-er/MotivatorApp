@@ -1,5 +1,5 @@
-from .db import SessionLocal, engine, Base
-from .models import Quote
+from Motivator.db import SessionLocal, engine, Base
+from Motivator.models import Quote
 
 # Create tables if not already created
 Base.metadata.create_all(bind=engine)
