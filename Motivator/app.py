@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from Motivator.db import SessionLocal, Base, engine
-from models import User
+from Motivator.models import User
 from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
