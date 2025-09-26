@@ -3,7 +3,7 @@ import logging
 import random
 from datetime import datetime, date
 from Motivator.db import SessionLocal
-from .models import User, Quote, SentQuote, MessageLog
+from Motivator.models import User, Quote, SentQuote, MessageLog
 from .send_sms import send_sms
 
 logging.basicConfig(level=logging.INFO)
