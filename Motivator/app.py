@@ -3,6 +3,9 @@ from Motivator.db import SessionLocal, Base, engine
 from Motivator.models import User
 from sqlalchemy.exc import IntegrityError
 
+# import your existing send_now logic
+from Motivator.send_now import send_now as send_now_task
+
 app = Flask(__name__)
 
 # Make sure DB tables exist (only needed once in dev; Render will handle migrations)
@@ -29,3 +32,12 @@ def submit():
         return jsonify({"status": "error", "message": "User already exists"}), 400
     finally:
         db.close()
+
+@app.route("/send_now", methods=["GET"])
+def send_now_route():
+    """Expose send_now via HTTP for testing"""
+    try:
+        send_now_task()
+        return jsonify({"status": "success", "message": "Quotes sent"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
