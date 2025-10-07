@@ -13,10 +13,12 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Create engine and session factory
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Declare base
 Base = declarative_base()
 
-# Import models so they get registered with Base
-from Motivator.models import User, Quote  # noqa: E402
+# Import models *after* Base is defined so SQLAlchemy can see them
+from Motivator import models  # noqa: E402

@@ -1,15 +1,11 @@
+# app.py
 from flask import Flask, request, jsonify
 from Motivator.db import SessionLocal, Base, engine
 from Motivator.models import User
+from Motivator.send_now import send_now as send_now_task
 from sqlalchemy.exc import IntegrityError
 
-# import your existing send_now logic
-from Motivator.send_now import send_now as send_now_task
-
 app = Flask(__name__)
-
-# Make sure DB tables exist (only needed once in dev; Render will handle migrations)
-Base.metadata.create_all(bind=engine)
 
 @app.route("/")
 def home():
@@ -17,8 +13,12 @@ def home():
 
 @app.route("/init-db")
 def init_db():
+    """Drop and recreate all tables for a fresh start."""
     from Motivator.db import Base, engine
+    from Motivator import models  # ensure tables are visible
+
     try:
+        Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
         return jsonify({"message": "Database initialized successfully"})
     except Exception as e:
@@ -26,6 +26,7 @@ def init_db():
 
 @app.route("/submit", methods=["POST"])
 def submit():
+    """Register a new user with phone + preferred time."""
     data = request.json
     phone = data.get("phone")
     time = data.get("time")
@@ -44,7 +45,7 @@ def submit():
 
 @app.route("/send_now", methods=["GET"])
 def send_now_route():
-    """Expose send_now via HTTP for testing"""
+    """Trigger quote send for all users (manual test endpoint)."""
     try:
         send_now_task()
         return jsonify({"status": "success", "message": "Quotes sent"})
