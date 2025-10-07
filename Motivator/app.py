@@ -15,6 +15,15 @@ Base.metadata.create_all(bind=engine)
 def home():
     return "Motivator is running!"
 
+@app.route("/init-db")
+def init_db():
+    from Motivator.db import Base, engine
+    try:
+        Base.metadata.create_all(bind=engine)
+        return jsonify({"message": "Database initialized successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/submit", methods=["POST"])
 def submit():
     data = request.json
