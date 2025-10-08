@@ -13,13 +13,10 @@ def home():
 
 @app.route("/init-db")
 def init_db():
-    """Drop and recreate all tables for a fresh start."""
-    from Motivator.db import Base, engine
-    from Motivator import models  # ensure tables are visible
-
     try:
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
+        from Motivator import models  # Force-load models so Base knows about them
+        print("Creating tables:", list(models.Base.metadata.tables.keys()))
+        models.Base.metadata.create_all(bind=engine)
         return jsonify({"message": "Database initialized successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
