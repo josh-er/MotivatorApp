@@ -45,6 +45,28 @@ def submit():
     finally:
         db.close()
 
+@app.route("/debug/users", methods=["GET"])
+def debug_users():
+    """Check all users currently in the database."""
+    db = SessionLocal()
+    try:
+        users = db.query(User).all()
+        result = [
+            {
+                "id": u.id,
+                "phone": u.phone,
+                "time": u.time,
+                "last_sent": u.last_sent,
+                "cycle": u.cycle
+            }
+            for u in users
+        ]
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
 @app.route("/send_now", methods=["GET"])
 def send_now_route():
     """Manually trigger sending quotes."""
