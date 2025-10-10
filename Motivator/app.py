@@ -4,6 +4,7 @@ from Motivator.db import SessionLocal, Base, engine
 from Motivator.models import User
 from Motivator.send_now import send_now as send_now_task
 from sqlalchemy.exc import IntegrityError
+import os
 
 app = Flask(__name__)
 
@@ -13,8 +14,9 @@ def home():
 
 @app.route("/init-db")
 def init_db():
+    """Initialize all database tables."""
     try:
-        from Motivator import models  # Force-load models so Base knows about them
+        from Motivator import models  # Ensure models are registered
         print("Creating tables:", list(models.Base.metadata.tables.keys()))
         models.Base.metadata.create_all(bind=engine)
         return jsonify({"message": "Database initialized successfully"})
@@ -24,16 +26,19 @@ def init_db():
 @app.route("/submit", methods=["POST"])
 def submit():
     """Register a new user with phone + preferred time."""
-    data = request.json
+    data = request.json or {}
     phone = data.get("phone")
     time = data.get("time")
+
+    if not phone or not time:
+        return jsonify({"status": "error", "message": "Phone and time are required"}), 400
 
     db = SessionLocal()
     try:
         user = User(phone=phone, time=time, last_sent=None)
         db.add(user)
         db.commit()
-        return jsonify({"status": "success"}), 201
+        return jsonify({"status": "success", "message": "User added"}), 201
     except IntegrityError:
         db.rollback()
         return jsonify({"status": "error", "message": "User already exists"}), 400
@@ -42,9 +47,16 @@ def submit():
 
 @app.route("/send_now", methods=["GET"])
 def send_now_route():
-    """Trigger quote send for all users (manual test endpoint)."""
+    """Manually trigger sending quotes."""
     try:
+        print("Triggering send_now_task()")
         send_now_task()
         return jsonify({"status": "success", "message": "Quotes sent"})
     except Exception as e:
+        print("Error during send_now:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
