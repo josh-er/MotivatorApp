@@ -1,7 +1,6 @@
-# app.py
 from flask import Flask, request, jsonify
 from Motivator.db import SessionLocal, Base, engine
-from Motivator.models import User
+from Motivator.models import User, Quote
 from Motivator.send_now import send_now as send_now_task
 from sqlalchemy.exc import IntegrityError
 import os
@@ -22,6 +21,7 @@ def init_db():
         return jsonify({"message": "Database initialized successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/submit", methods=["POST"])
 def submit():
@@ -45,6 +45,7 @@ def submit():
     finally:
         db.close()
 
+
 @app.route("/debug/users", methods=["GET"])
 def debug_users():
     """Check all users currently in the database."""
@@ -66,6 +67,29 @@ def debug_users():
         return jsonify({"error": str(e)}), 500
     finally:
         db.close()
+
+
+@app.route("/add_quote", methods=["POST"])
+def add_quote():
+    """Add a new motivational quote to the database."""
+    data = request.json or {}
+    text = data.get("text")
+
+    if not text:
+        return jsonify({"error": "Missing 'text'"}), 400
+
+    db = SessionLocal()
+    try:
+        quote = Quote(text=text)
+        db.add(quote)
+        db.commit()
+        return jsonify({"status": "success", "quote": text}), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        db.close()
+
 
 @app.route("/send_now", methods=["GET"])
 def send_now_route():
