@@ -69,6 +69,29 @@ def debug_users():
         db.close()
 
 
+@app.route("/debug/add_user", methods=["POST"])
+def debug_add_user():
+    """Quickly add a user for testing (bypasses front-end)."""
+    data = request.json or {}
+    phone = data.get("phone")
+    time = data.get("time", "09:00")
+
+    if not phone:
+        return jsonify({"error": "Missing 'phone'"}), 400
+
+    db = SessionLocal()
+    try:
+        user = User(phone=phone, time=time)
+        db.add(user)
+        db.commit()
+        return jsonify({"status": "success", "user": {"phone": phone, "time": time}}), 201
+    except IntegrityError:
+        db.rollback()
+        return jsonify({"status": "error", "message": "User already exists"}), 400
+    finally:
+        db.close()
+
+
 @app.route("/add_quote", methods=["POST"])
 def add_quote():
     """Add a new motivational quote to the database."""
