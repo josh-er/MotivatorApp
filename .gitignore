@@ -7,9 +7,16 @@ venv/
 
 # Environment variables
 .env
+render.yaml
 
 # SQLite databases
 *.db
+*.sqlite
+*.sqlite3
+logs.csv
+scheduler.log
+sent_log.csv
+submissions.csv
 
 # CSV logs
 *.csv
@@ -18,3 +25,11 @@ venv/
 .DS_Store
 
 scheduler.log
+
+# IDE
+.vscode/
+.idea/
+
+# Environment / secrets
+.env.local
+*.ini

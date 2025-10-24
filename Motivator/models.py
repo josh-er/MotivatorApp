@@ -13,6 +13,8 @@ class User(Base):
     time = Column(String, nullable=False)  # format "HH:MM"
     last_sent = Column(Date, nullable=True)  # Track last send date
     cycle = Column(Integer, default=1, nullable=False)  # Track "quote cycles"
+    last_quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
+
 
     sent_quotes = relationship("SentQuote", back_populates="user")
 
