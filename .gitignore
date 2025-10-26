@@ -32,4 +32,4 @@ scheduler.log
 
 # Environment / secrets
 .env.local
-*.ini
+setup_env.py
