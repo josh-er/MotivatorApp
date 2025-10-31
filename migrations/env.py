@@ -1,19 +1,28 @@
 from logging.config import fileConfig
 import sys
 import os
+from dotenv import load_dotenv
+
+#Load .env *before* Alembic reads its config
+load_dotenv()
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
+
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = context.config
+
+# Inject the actual DATABASE_URL into Alembic's config explicitly
+if os.getenv("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
+
 
 # Ensure project root is on sys.path so Alembic can find the Motivator package
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import your models
 from Motivator.models import Base  # use the package name
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
