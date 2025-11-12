@@ -25,6 +25,7 @@ submissions.csv
 .DS_Store
 
 scheduler.log
+motivator.log
 
 # IDE
 .vscode/
