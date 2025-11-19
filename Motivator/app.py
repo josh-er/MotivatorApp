@@ -11,6 +11,10 @@ app = Flask(__name__)
 def home():
     return "Motivator is running!"
 
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
+
 @app.route("/init-db")
 def init_db():
     """Initialize all database tables."""
