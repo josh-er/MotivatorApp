@@ -3,6 +3,8 @@ from Motivator.db import SessionLocal, Base, engine
 from Motivator.models import User, Quote
 from Motivator.send_now import send_now as send_now_task
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 
 app = Flask(__name__)
@@ -29,20 +31,37 @@ def init_db():
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    """Register a new user with phone + preferred time."""
+    """Register a new user with phone + preferred time (stored in UTC)."""
     data = request.json or {}
     phone = data.get("phone")
-    time = data.get("time")
+    time_str = data.get("time")
 
-    if not phone or not time:
+    if not phone or not time_str:
         return jsonify({"status": "error", "message": "Phone and time are required"}), 400
+
+    # Parse HH:MM input
+    try:
+        user_time_naive = datetime.strptime(time_str, "%H:%M")
+    except ValueError:
+        return jsonify({"status": "error", "message": "Time must be HH:MM"}), 400
+
+    # Convert ET → UTC
+    et = ZoneInfo("America/New_York")
+    utc = ZoneInfo("UTC")
+
+    today = datetime.now(et).date()
+    dt_et = datetime.combine(today, user_time_naive.time(), tzinfo=et)
+    dt_utc = dt_et.astimezone(utc)
+
+    # Store normalized UTC time as HH:MM string
+    utc_string = dt_utc.strftime("%H:%M")
 
     db = SessionLocal()
     try:
-        user = User(phone=phone, time=time, last_sent=None)
+        user = User(phone=phone, time=utc_string, last_sent=None)
         db.add(user)
         db.commit()
-        return jsonify({"status": "success", "message": "User added"}), 201
+        return jsonify({"status": "success", "message": "User added", "stored_utc_time": utc_string}), 201
     except IntegrityError:
         db.rollback()
         return jsonify({"status": "error", "message": "User already exists"}), 400
@@ -92,6 +111,28 @@ def debug_add_user():
     except IntegrityError:
         db.rollback()
         return jsonify({"status": "error", "message": "User already exists"}), 400
+    finally:
+        db.close()
+
+
+@app.route("/debug/delete_user", methods=["POST"])
+def delete_user():
+    """Delete a user by phone number."""
+    data = request.json or {}
+    phone = data.get("phone")
+
+    if not phone:
+        return jsonify({"status": "error", "message": "Missing phone"}), 400
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.phone == phone).first()
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+
+        db.delete(user)
+        db.commit()
+        return jsonify({"status": "success", "message": f"Deleted {phone}"}), 200
     finally:
         db.close()
 
