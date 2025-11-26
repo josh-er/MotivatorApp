@@ -117,7 +117,7 @@ def debug_add_user():
 
 @app.route("/debug/delete_user", methods=["POST"])
 def delete_user():
-    """Delete a user by phone number."""
+    """Delete a user by phone number (also removes their sent history)."""
     data = request.json or {}
     phone = data.get("phone")
 
@@ -130,9 +130,19 @@ def delete_user():
         if not user:
             return jsonify({"status": "error", "message": "User not found"}), 404
 
+        # Delete related sent-quote history FIRST
+        from Motivator.models import SentQuote
+        db.query(SentQuote).filter(SentQuote.user_id == user.id).delete()
+
+        # Now it's safe to delete the user
         db.delete(user)
         db.commit()
+
         return jsonify({"status": "success", "message": f"Deleted {phone}"}), 200
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         db.close()
 
