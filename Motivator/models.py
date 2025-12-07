@@ -15,6 +15,8 @@ class User(Base):
     cycle = Column(Integer, default=1, nullable=False)  # Track "quote cycles"
     last_quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
 
+    opted_in = Column(Boolean, default=True)
+    received_compliance = Column(Boolean, default=False)
 
     sent_quotes = relationship("SentQuote", back_populates="user")
 
