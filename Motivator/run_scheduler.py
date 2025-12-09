@@ -1,4 +1,3 @@
-# run_scheduler.py
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timezone
@@ -18,26 +17,51 @@ def send_quotes():
     logging.info(f"[Scheduler] Checking for users scheduled at {now_utc} UTC")
 
     db = SessionLocal()
-
-    # Get users matching exact HH:MM UTC
     users = db.query(User).filter(User.time == now_utc).all()
 
     logging.info(f"[Scheduler] Found {len(users)} user(s) to message.")
 
     for user in users:
 
-        # Skip if already sent today
+        # ---------------------------------------------------------
+        # 1. Skip if user STOP'ed
+        # ---------------------------------------------------------
+        if not user.opted_in:
+            logging.info(f"[Scheduler] Skipping {user.phone} — user opted out.")
+            continue
+
+        # ---------------------------------------------------------
+        # 2. Skip if they already received today's message
+        # ---------------------------------------------------------
         if user.last_sent == today_utc:
             logging.info(f"[Scheduler] Skipping {user.phone}, already sent today.")
             continue
 
-        # Fetch random quote
+        # ---------------------------------------------------------
+        # 3. Get a quote
+        # ---------------------------------------------------------
         quote = db.query(Quote).order_by(func.random()).first()
         if not quote:
             logging.warning("[Scheduler] No quotes in database.")
             continue
 
-        # Send SMS
+        # ---------------------------------------------------------
+        # 4. FIRST MESSAGE — compliance text
+        # (sent once, before their first motivational quote)
+        # ---------------------------------------------------------
+        if not user.received_compliance:
+            send_sms(
+                user.phone,
+                "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel."
+            )
+            user.received_compliance = True
+            db.commit()
+            logging.info(f"[Scheduler] Sent compliance message to {user.phone}")
+            continue  # Do NOT send the quote yet
+
+        # ---------------------------------------------------------
+        # 5. Normal daily quote
+        # ---------------------------------------------------------
         send_sms(user.phone, quote.text)
 
         # Update last_sent
@@ -49,14 +73,14 @@ def send_quotes():
             message=quote.text
         )
         db.add(log_entry)
-
         db.commit()
-        logging.info(f"[Scheduler] Sent to {user.phone}")
+
+        logging.info(f"[Scheduler] Sent quote to {user.phone}")
 
     db.close()
 
-# needed for func.random()
 
+# Run the job every minute (Render supports this fine)
 scheduler.add_job(send_quotes, "interval", minutes=1)
 scheduler.start()
 

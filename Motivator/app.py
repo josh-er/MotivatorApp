@@ -5,6 +5,7 @@ from Motivator.send_now import send_now as send_now_task
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from twilio.twiml.messaging_response import MessagingResponse
 import os
 
 app = Flask(__name__)
@@ -179,6 +180,44 @@ def send_now_route():
     except Exception as e:
         print("Error during send_now:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/sms/inbound", methods=["POST"])
+def sms_inbound():
+    db = SessionLocal()
+    from_number = request.form.get("From")
+    body = request.form.get("Body", "").strip().upper()
+
+    user = db.query(User).filter(User.phone == from_number).first()
+
+    resp = MessagingResponse()
+
+    if not user:
+        resp.message("You're not signed up for Motivator. Download the app to join.")
+        return str(resp)
+
+    # STOP — required by law
+    if body == "STOP":
+        user.opted_in = False
+        db.commit()
+        resp.message("You've been unsubscribed. Reply START to rejoin Motivator.")
+        return str(resp)
+
+    # START — re-enable messages
+    if body == "START":
+        user.opted_in = True
+        db.commit()
+        resp.message("You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel.")
+        return str(resp)
+
+    # HELP — legally required
+    if body == "HELP":
+        resp.message("For help, contact our support team at support@motivator.app. You receive 1 motivational SMS per day. Reply STOP to unsubscribe. Msg & data rates may apply.")
+        return str(resp)
+
+    # Fallback
+    resp.message("Unknown command. Reply HELP for info.")
+    return str(resp)
 
 
 if __name__ == "__main__":
