@@ -181,18 +181,6 @@ def send_now_route():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/init_opt_in_flag")
-def init_opt_in_flag():
-    db = SessionLocal()
-    users = db.query(User).all()
-    for u in users:
-        u.opted_in = True
-        u.received_compliance = False
-    db.commit()
-    db.close()
-    return "OK — flags initialized."
-
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
