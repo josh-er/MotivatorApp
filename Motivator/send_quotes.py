@@ -1,6 +1,6 @@
 import random
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from sqlalchemy.orm import joinedload
 from .send_sms import send_sms
 from Motivator.db import SessionLocal
@@ -88,14 +88,14 @@ def send_quote_to_user(db, user, today):
 
 def send_quotes():
     """Scheduled sending: send one unseen quote to each user whose schedule matches current time."""
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     current_time = now.strftime("%H:%M")
-    today = date.today()
+    today = now.date()
     logger.info(f"Running scheduled send_quotes() at {current_time}")
 
     db = SessionLocal()
     try:
-        users = db.query(User).filter(User.time == current_time).all()
+        users = db.query(User).filter(User.utc_time == current_time).all()
         logger.info(f"Found {len(users)} user(s) scheduled for {current_time}")
 
         for user in users:

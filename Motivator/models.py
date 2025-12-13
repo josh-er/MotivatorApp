@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, Boolean
-
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
@@ -11,9 +10,20 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     phone = Column(String, unique=True, index=True, nullable=False)
-    time = Column(String, nullable=False)  # format "HH:MM"
-    last_sent = Column(Date, nullable=True)  # Track last send date
-    cycle = Column(Integer, default=1, nullable=False)  # Track "quote cycles"
+
+    # New fields:
+    # local_time = the time user chose in their local timezone (HH:MM)
+    # timezone = IANA timezone string (e.g. "America/Los_Angeles")
+    # utc_time = the normalized UTC HH:MM equivalent stored for scheduling comparison
+    local_time = Column(String, nullable=True)   # "HH:MM" as user-submitted local time
+    timezone = Column(String, nullable=True)     # IANA timezone like "America/New_York"
+    utc_time = Column(String, nullable=True)     # normalized HH:MM in UTC
+
+    # legacy `time` kept for compatibility during migration (optional)
+    time = Column(String, nullable=True)  # old field — will be kept for now
+
+    last_sent = Column(Date, nullable=True)
+    cycle = Column(Integer, default=1, nullable=False)
     last_quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
 
     opted_in = Column(Boolean, default=True)
@@ -49,7 +59,7 @@ class SentQuote(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=False)
     sent_date = Column(DateTime, default=datetime.utcnow)
-    cycle = Column(Integer, nullable=False)  # Which cycle this quote was sent in
+    cycle = Column(Integer, nullable=False)
 
     user = relationship("User", back_populates="sent_quotes")
     quote = relationship("Quote", back_populates="sent_quotes")

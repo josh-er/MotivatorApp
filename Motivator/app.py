@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from Motivator.db import SessionLocal, Base, engine
+from Motivator.user_service import create_user
 from Motivator.models import User, Quote
 from Motivator.send_now import send_now as send_now_task
 from sqlalchemy.exc import IntegrityError
@@ -32,40 +33,46 @@ def init_db():
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    """Register a new user with phone + preferred time (stored in UTC)."""
+    """Register a new user with phone + preferred time + timezone."""
     data = request.json or {}
     phone = data.get("phone")
-    time_str = data.get("time")
+    time_str = data.get("time")         # "HH:MM"
+    tz_str = data.get("timezone")       # e.g. "America/Los_Angeles"
 
     if not phone or not time_str:
         return jsonify({"status": "error", "message": "Phone and time are required"}), 400
 
-    # Parse HH:MM input
+    # Default timezone if mobile app didn't send one
+    if not tz_str:
+        tz_str = "America/New_York"
+
+    # Validate timezone early
     try:
-        user_time_naive = datetime.strptime(time_str, "%H:%M")
-    except ValueError:
-        return jsonify({"status": "error", "message": "Time must be HH:MM"}), 400
-
-    # Convert ET → UTC
-    et = ZoneInfo("America/New_York")
-    utc = ZoneInfo("UTC")
-
-    today = datetime.now(et).date()
-    dt_et = datetime.combine(today, user_time_naive.time(), tzinfo=et)
-    dt_utc = dt_et.astimezone(utc)
-
-    # Store normalized UTC time as HH:MM string
-    utc_string = dt_utc.strftime("%H:%M")
+        ZoneInfo(tz_str)
+    except Exception:
+        return jsonify({"status": "error", "message": "Invalid timezone"}), 400
 
     db = SessionLocal()
     try:
-        user = User(phone=phone, time=utc_string, last_sent=None)
+        user = create_user(
+            phone=phone,
+            local_time=time_str,
+            timezone=tz_str
+        )
         db.add(user)
         db.commit()
-        return jsonify({"status": "success", "message": "User added", "stored_utc_time": utc_string}), 201
+
+        return jsonify({
+            "status": "success",
+            "message": "User added",
+            "utc_time": user.utc_time,
+            "timezone": user.timezone
+        }), 201
+
     except IntegrityError:
         db.rollback()
         return jsonify({"status": "error", "message": "User already exists"}), 400
+
     finally:
         db.close()
 
@@ -82,7 +89,10 @@ def debug_users():
                 "phone": u.phone,
                 "time": u.time,
                 "last_sent": u.last_sent,
-                "cycle": u.cycle
+                "cycle": u.cycle,
+                "local_time": u.local_time,
+                "timezone": u.timezone,
+                "utc_time": u.utc_time
             }
             for u in users
         ]
@@ -95,20 +105,28 @@ def debug_users():
 
 @app.route("/debug/add_user", methods=["POST"])
 def debug_add_user():
-    """Quickly add a user for testing (bypasses front-end)."""
     data = request.json or {}
     phone = data.get("phone")
-    time = data.get("time", "09:00")
+    local_time = data.get("time", "09:00")
+    timezone = data.get("timezone", "America/New_York")
 
     if not phone:
         return jsonify({"error": "Missing 'phone'"}), 400
 
     db = SessionLocal()
     try:
-        user = User(phone=phone, time=time)
+        user = create_user(phone, local_time, timezone)
         db.add(user)
         db.commit()
-        return jsonify({"status": "success", "user": {"phone": phone, "time": time}}), 201
+        return jsonify({
+            "status": "success",
+            "user": {
+                "phone": phone,
+                "local_time": local_time,
+                "timezone": timezone,
+                "utc_time": user.utc_time
+            }
+        }), 201
     except IntegrityError:
         db.rollback()
         return jsonify({"status": "error", "message": "User already exists"}), 400

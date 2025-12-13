@@ -29,7 +29,7 @@ def run_scheduler():
         try:
             db = SessionLocal()
             now = datetime.now().strftime("%H:%M")
-            due_users = db.query(User).filter(User.time == now).all()
+            due_users = db.query(User).filter(User.utc_time == now).all()
 
             if due_users:
                 logger.info(f"{len(due_users)} user(s) scheduled for {now}, triggering send_now()...")

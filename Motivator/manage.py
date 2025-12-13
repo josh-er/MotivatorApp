@@ -2,24 +2,34 @@
 import argparse
 from Motivator.db import SessionLocal
 from Motivator.models import User, Quote
+from Motivator.user_service import create_user
 from .send_quotes import send_now
+from sqlalchemy.exc import IntegrityError
 
-def add_user(phone, schedule_time=None):
+def add_user(phone, local_time, timezone):
     db = SessionLocal()
-    user = User(phone=phone, time=schedule_time)
-    db.add(user)
-    db.commit()
-    db.close()
-    print(f"Added user {phone} with schedule {schedule_time}")
+    try:
+        user = create_user(phone, local_time, timezone)
+        db.add(user)
+        db.commit()
+        print(
+            f"Added user {phone} "
+            f"@ {user.local_time} ({user.timezone}, UTC: {user.utc_time})"
+        )
+    except IntegrityError:
+        db.rollback()
+        print(f"User {phone} already exists.")
+    finally:
+        db.close()
 
 def list_users():
     db = SessionLocal()
-    users = db.query(User).all()
+    users = db.query(User).order_by(User.phone).all()
     if not users:
         print("No users found.")
     else:
         for u in users:
-            print(f"- {u.phone} @ {u.time}")
+            print(f"- {u.phone} @ {u.local_time} (UTC: {u.utc_time})")
     db.close()
 
 def remove_user(phone):
@@ -50,7 +60,8 @@ def main():
     # user commands
     add_parser = subparsers.add_parser("add", help="Add a user")
     add_parser.add_argument("phone", type=str, help="Phone number")
-    add_parser.add_argument("schedule_time", nargs="?", default=None, help="Optional schedule time")
+    add_parser.add_argument("local_time", help="HH:MM local time")
+    add_parser.add_argument("--timezone", default="America/New_York", help="IANA timezone (default: America/New_York)")
 
     subparsers.add_parser("list", help="List all users")
 
@@ -67,7 +78,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "add":
-        add_user(args.phone, args.schedule_time)
+        add_user(args.phone, args.local_time, args.timezone)
     elif args.command == "list":
         list_users()
     elif args.command == "remove":
