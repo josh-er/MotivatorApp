@@ -205,6 +205,28 @@ def sms_inbound():
     resp.message("Unknown command. Reply HELP for info.")
     return str(resp)
 
+@app.route("/admin/users", methods=["GET"])
+def admin_users():
+    if not require_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+
+    db = SessionLocal()
+    try:
+        users = db.query(User).all()
+        return jsonify([
+            {
+                "phone": u.phone,
+                "local_time": u.local_time,
+                "timezone": u.timezone,
+                "utc_time": u.utc_time,
+                "last_sent": u.last_sent.isoformat() if u.last_sent else None,
+                "opted_in": u.opted_in,
+            }
+            for u in users
+        ])
+    finally:
+        db.close()
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
