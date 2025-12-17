@@ -1,3 +1,7 @@
+#testing sending logic
+from Motivator.send_quotes import send_quote_to_user
+from datetime import timezone
+#testing sending logic
 import os
 from flask import Flask, request, jsonify
 from datetime import datetime
@@ -224,6 +228,46 @@ def admin_users():
             }
             for u in users
         ])
+    finally:
+        db.close()
+
+# admin test send
+@app.route("/admin/test-send", methods=["POST"])
+def admin_test_send():
+    if not require_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+
+    data = request.json or {}
+    phone = data.get("phone")
+
+    if not phone:
+        return jsonify({"error": "Missing phone"}), 400
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.phone == phone).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        today = datetime.now(timezone.utc).date()
+
+        # IMPORTANT: same logic scheduler uses
+        if user.last_sent == today:
+            return jsonify({
+                "status": "skipped",
+                "reason": "already sent today"
+            }), 200
+
+        send_quote_to_user(db, user, today)
+        db.commit()
+
+        return jsonify({
+            "status": "sent",
+            "phone": user.phone,
+            "cycle": user.cycle,
+            "last_sent": user.last_sent.isoformat() if user.last_sent else None
+        }), 200
+
     finally:
         db.close()
 
