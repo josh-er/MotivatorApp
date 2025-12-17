@@ -271,6 +271,25 @@ def admin_test_send():
     finally:
         db.close()
 
+# admin add quote
+@app.route("/admin/add-quote", methods=["POST"])
+def admin_add_quote():
+    if not require_admin(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json or {}
+    text = data.get("text")
+
+    if not text:
+        return jsonify({"error": "Missing text"}), 400
+
+    db = SessionLocal()
+    db.add(Quote(text=text))
+    db.commit()
+    db.close()
+
+    return jsonify({"status": "added"})
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
