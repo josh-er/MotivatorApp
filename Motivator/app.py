@@ -252,11 +252,6 @@ def admin_test_send():
         today = datetime.now(timezone.utc).date()
 
         # IMPORTANT: same logic scheduler uses
-        if user.last_sent == today:
-            return jsonify({
-                "status": "skipped",
-                "reason": "already sent today"
-            }), 200
 
         send_quote_to_user(db, user, today)
         db.commit()
