@@ -29,7 +29,7 @@ def get_unseen_quotes(db, user):
     return unseen
 
 
-def send_quote_to_user(db, user, today):
+def send_quote_to_user(db, user, today, ignore_last_sent=False):
     """Send one quote to a user, ensuring no repeats until reset."""
     # Default cycle = 1
     if not hasattr(user, "cycle") or user.cycle is None:
