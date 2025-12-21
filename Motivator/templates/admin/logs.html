@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% block content %}
+
+<h2>Message Logs</h2>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>Phone</th>
+      <th>Quote</th>
+      <th>Status</th>
+      <th>Error</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for log in logs %}
+    <tr class="{% if log.status != 'sent' %}table-warning{% endif %}">
+      <td>{{ log.created_at }}</td>
+      <td>{{ log.phone }}</td>
+      <td>
+        {{ log.quote[:80] }}{% if log.quote|length > 80 %}…{% endif %}
+      </td>
+      <td>{{ log.status }}</td>
+      <td>{{ log.error or '-' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
