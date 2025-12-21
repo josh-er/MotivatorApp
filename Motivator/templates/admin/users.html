@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% block content %}
+
+<h2>Users</h2>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>Phone</th>
+      <th>Timezone</th>
+      <th>Local Time</th>
+      <th>UTC Time</th>
+      <th>Last Sent</th>
+      <th>Opted In</th>
+      <th>Cycle</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr class="{% if not u.opted_in %}table-secondary{% endif %}">
+      <td>{{ u.phone }}</td>
+      <td>{{ u.timezone }}</td>
+      <td>{{ u.local_time }}</td>
+      <td>{{ u.utc_time }}</td>
+      <td>{{ u.last_sent or "-" }}</td>
+      <td>{{ u.opted_in }}</td>
+      <td>{{ u.cycle }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

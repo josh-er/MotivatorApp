@@ -1,7 +1,7 @@
 #testing sending logic
 import os
 from flask import Flask, request, jsonify
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from sqlalchemy.exc import IntegrityError
 from twilio.twiml.messaging_response import MessagingResponse
@@ -9,11 +9,14 @@ from twilio.twiml.messaging_response import MessagingResponse
 from Motivator.db import SessionLocal, engine
 from Motivator.user_service import create_user
 from Motivator.models import User, Quote
+from Motivator.admin.routes import admin_bp
 
 ADMIN_KEY = os.getenv("ADMIN_KEY")
 ENV = os.getenv("ENV", "development")
 
 app = Flask(__name__)
+
+app.register_blueprint(admin_bp)
 
 def require_admin(req):
     if not ADMIN_KEY:
@@ -206,27 +209,6 @@ def sms_inbound():
     resp.message("Unknown command. Reply HELP for info.")
     return str(resp)
 
-@app.route("/admin/users", methods=["GET"])
-def admin_users():
-    if not require_admin(request):
-        return jsonify({"error": "unauthorized"}), 401
-
-    db = SessionLocal()
-    try:
-        users = db.query(User).all()
-        return jsonify([
-            {
-                "phone": u.phone,
-                "local_time": u.local_time,
-                "timezone": u.timezone,
-                "utc_time": u.utc_time,
-                "last_sent": u.last_sent.isoformat() if u.last_sent else None,
-                "opted_in": u.opted_in,
-            }
-            for u in users
-        ])
-    finally:
-        db.close()
 
 # admin test send
 @app.route("/admin/test-send", methods=["POST"])
