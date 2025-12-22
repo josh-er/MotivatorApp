@@ -84,6 +84,7 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             error=str(e)
         )
         db.add(log)
+        db.commit()
 
 
 def send_quotes():
