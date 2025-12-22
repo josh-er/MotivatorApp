@@ -12,14 +12,21 @@ def get_all_users():
     finally:
         db.close()
 
-def get_message_logs(limit=100):
+def get_message_logs(status=None, phone=None, limit=100):
     db = SessionLocal()
     try:
+        q = db.query(MessageLog)
+
+        if status:
+            q = q.filter(MessageLog.status == status)
+
+        if phone:
+            q = q.filter(MessageLog.phone.contains(phone))
+
         return (
-            db.query(MessageLog)
-            .order_by(MessageLog.timestamp.desc())
-            .limit(limit)
-            .all()
+            q.order_by(MessageLog.timestamp.desc())
+             .limit(limit)
+             .all()
         )
     finally:
         db.close()
