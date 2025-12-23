@@ -40,7 +40,6 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
     if not unseen:
         # All quotes sent → soft reset
         user.cycle += 1
-        db.commit()
         logger.info(f"Resetting {user.phone} to cycle {user.cycle}")
         unseen = get_unseen_quotes(db, user)
 
@@ -84,7 +83,6 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             error=str(e)
         )
         db.add(log)
-        db.commit()
 
 
 def send_quotes():
