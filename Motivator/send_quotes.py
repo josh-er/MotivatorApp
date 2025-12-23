@@ -75,7 +75,7 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
         db.add(log)
 
     except Exception as e:
-        logger.error(f"Failed to send to {user.phone}: {e}")
+        logger.exception(f"Failed to send to {user.phone}")
         log = MessageLog(
             phone=user.phone,
             quote=quote.text,
@@ -83,6 +83,7 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             error=str(e)
         )
         db.add(log)
+        db.flush()
         db.commit()
         raise
 
