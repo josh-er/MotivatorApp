@@ -22,5 +22,6 @@ def create_user(phone: str, local_time: str, timezone: str):
         local_time=local_time,
         timezone=timezone,
         utc_time=dt_utc.strftime("%H:%M"),
+        time=dt_utc.time(),
         last_sent=None
     )
