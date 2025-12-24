@@ -76,6 +76,7 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             timestamp=datetime.utcnow()
         )
         db.add(log)
+        db.commit()
 
 
 def send_quotes():
