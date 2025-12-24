@@ -12,10 +12,8 @@ logger = logging.getLogger(__name__)
 
 def get_unseen_quotes(db, user):
     """Return list of quotes this user hasn’t seen in the current cycle."""
-    # All quotes
     all_quotes = db.query(Quote).all()
 
-    # Quote IDs user has already seen this cycle
     seen_ids = {
         sq.quote_id
         for sq in db.query(SentQuote).filter(
@@ -24,21 +22,18 @@ def get_unseen_quotes(db, user):
         )
     }
 
-    # Filter unseen
     unseen = [q for q in all_quotes if q.id not in seen_ids]
     return unseen
 
 
 def send_quote_to_user(db, user, today, ignore_last_sent=False):
     """Send one quote to a user, ensuring no repeats until reset."""
-    # Default cycle = 1
     if not hasattr(user, "cycle") or user.cycle is None:
         user.cycle = 1
 
     unseen = get_unseen_quotes(db, user)
 
     if not unseen:
-        # All quotes sent → soft reset
         user.cycle += 1
         logger.info(f"Resetting {user.phone} to cycle {user.cycle}")
         unseen = get_unseen_quotes(db, user)
@@ -47,17 +42,14 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             logger.warning("No quotes exist in DB at all")
             return
 
-    # Pick one unseen at random
     quote = random.choice(unseen)
 
     try:
         send_sms(user.phone, quote.text)
         logger.info(f"Sent to {user.phone}: {quote.text}")
 
-        # Update user
         user.last_sent = today
 
-        # Log in SentQuote
         sent = SentQuote(
             user_id=user.id,
             quote_id=quote.id,
@@ -66,7 +58,6 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
         )
         db.add(sent)
 
-        # Log in MessageLog
         log = MessageLog(
             phone=user.phone,
             quote=quote.text,
@@ -85,9 +76,6 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             timestamp=datetime.utcnow()
         )
         db.add(log)
-        db.flush()
-        db.commit()
-        raise
 
 
 def send_quotes():
@@ -103,12 +91,15 @@ def send_quotes():
         logger.info(f"Found {len(users)} user(s) scheduled for {current_time}")
 
         for user in users:
-            if user.last_sent == today:
-                logger.info(f"Skipping {user.phone}, already sent today")
-                continue
-            send_quote_to_user(db, user, today)
+            try:
+                if user.last_sent == today:
+                    logger.info(f"Skipping {user.phone}, already sent today")
+                    continue
+                send_quote_to_user(db, user, today)
+                db.commit()  # commit per user
+            except Exception:
+                db.rollback()  # rollback only this user
 
-        db.commit()
     finally:
         db.close()
 
@@ -124,7 +115,11 @@ def send_now(phone: str):
             logger.warning(f"No user found with phone {phone}")
             return
 
-        send_quote_to_user(db, user, today)
-        db.commit()
+        try:
+            send_quote_to_user(db, user, today)
+            db.commit()
+        except Exception:
+            db.rollback()
+
     finally:
         db.close()
