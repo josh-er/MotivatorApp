@@ -80,7 +80,7 @@ def send_now():
                             logger.warning(f"Attempt 1 failed for {user.phone}: {e}. Retrying...")
                             time.sleep(5)
                         else:
-                            status = "error"
+                            status = "failed"
                             error_text = str(e)
                             logger.error(f"Attempt 2 failed for {user.phone}: {error_text}")
 
