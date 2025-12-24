@@ -70,7 +70,8 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
         log = MessageLog(
             phone=user.phone,
             quote=quote.text,
-            status="success"
+            status="success",
+            timestamp=datetime.utcnow()
         )
         db.add(log)
 
@@ -80,7 +81,8 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             phone=user.phone,
             quote=quote.text,
             status="failed",
-            error=str(e)
+            error=str(e),
+            timestamp=datetime.utcnow()
         )
         db.add(log)
         db.flush()
