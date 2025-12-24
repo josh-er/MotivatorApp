@@ -18,7 +18,7 @@ def get_unseen_quotes(db, user):
         sq.quote_id
         for sq in db.query(SentQuote).filter(
             SentQuote.user_id == user.id,
-            SentQuote.cycle == getattr(user, "cycle", 1)  # default cycle 1
+            SentQuote.cycle == getattr(user, "cycle", 1)
         )
     }
 
@@ -65,6 +65,7 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             timestamp=datetime.utcnow()
         )
         db.add(log)
+        db.commit()  # commit success immediately
 
     except Exception as e:
         logger.exception(f"Failed to send to {user.phone}")
@@ -76,7 +77,7 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
             timestamp=datetime.utcnow()
         )
         db.add(log)
-        db.commit()
+        db.commit()  # commit failure immediately
 
 
 def send_quotes():
@@ -97,7 +98,6 @@ def send_quotes():
                     logger.info(f"Skipping {user.phone}, already sent today")
                     continue
                 send_quote_to_user(db, user, today)
-                db.commit()  # commit per user
             except Exception:
                 db.rollback()  # rollback only this user
 
@@ -118,7 +118,6 @@ def send_now(phone: str):
 
         try:
             send_quote_to_user(db, user, today)
-            db.commit()
         except Exception:
             db.rollback()
 
