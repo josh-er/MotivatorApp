@@ -22,12 +22,12 @@ def get_unseen_quotes(db, user):
         )
     }
 
-    unseen = [q for q in all_quotes if q.id not in seen_ids]
-    return unseen
+    return [q for q in all_quotes if q.id not in seen_ids]
 
 
-def send_quote_to_user(db, user, today, ignore_last_sent=False):
-    """Send one quote to a user, ensuring no repeats until reset."""
+def send_quote_to_user(db, user, today):
+    """Send one quote to a user, ensuring no repeats until reset and always logging."""
+
     if not hasattr(user, "cycle") or user.cycle is None:
         user.cycle = 1
 
@@ -44,12 +44,22 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
 
     quote = random.choice(unseen)
 
+    # Create log entry first
+    log = MessageLog(
+        phone=user.phone,
+        quote=quote.text,
+        status="pending",
+        timestamp=datetime.utcnow()
+    )
+    db.add(log)
+    db.commit()  # ensure the log exists even if send_sms fails
+
     try:
         send_sms(user.phone, quote.text)
         logger.info(f"Sent to {user.phone}: {quote.text}")
+        log.status = "success"
 
         user.last_sent = today
-
         sent = SentQuote(
             user_id=user.id,
             quote_id=quote.id,
@@ -58,26 +68,13 @@ def send_quote_to_user(db, user, today, ignore_last_sent=False):
         )
         db.add(sent)
 
-        log = MessageLog(
-            phone=user.phone,
-            quote=quote.text,
-            status="success",
-            timestamp=datetime.utcnow()
-        )
-        db.add(log)
-        db.commit()  # commit success immediately
-
     except Exception as e:
         logger.exception(f"Failed to send to {user.phone}")
-        log = MessageLog(
-            phone=user.phone,
-            quote=quote.text,
-            status="failed",
-            error=str(e),
-            timestamp=datetime.utcnow()
-        )
-        db.add(log)
-        db.commit()  # commit failure immediately
+        log.status = "failed"
+        log.error = str(e)
+
+    finally:
+        db.commit()  # update log and user/sent quote info
 
 
 def send_quotes():
@@ -99,7 +96,7 @@ def send_quotes():
                     continue
                 send_quote_to_user(db, user, today)
             except Exception:
-                db.rollback()  # rollback only this user
+                db.rollback()  # rollback only if something unexpected happens
 
     finally:
         db.close()
@@ -111,15 +108,12 @@ def send_now(phone: str):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.phone == phone).first()
-
         if not user:
             logger.warning(f"No user found with phone {phone}")
             return
-
         try:
             send_quote_to_user(db, user, today)
         except Exception:
             db.rollback()
-
     finally:
         db.close()
