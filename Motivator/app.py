@@ -107,27 +107,7 @@ if ENV != "production":
         ])
 
 
-    @app.route("/debug/add_user", methods=["POST"])
-    def debug_add_user():
-        if not require_admin(request):
-            return jsonify({"error": "Unauthorized"}), 401
-
-        data = request.json or {}
-        phone = data.get("phone")
-        local_time = data.get("time", "09:00")
-        timezone = data.get("timezone", "America/New_York")
-
-        if not phone:
-            return jsonify({"error": "Missing phone"}), 400
-
-        db = SessionLocal()
-        try:
-            user = create_user(phone, local_time, timezone)
-            db.add(user)
-            db.commit()
-            return jsonify({"status": "ok", "utc_time": user.utc_time})
-        finally:
-            db.close()
+    
 
 
     @app.route("/debug/delete_user", methods=["POST"])
@@ -174,6 +154,29 @@ if ENV != "production":
         db.close()
 
         return jsonify({"status": "added"})
+
+
+@app.route("/debug/add_user", methods=["POST"])
+def debug_add_user():
+    if not require_admin(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json or {}
+    phone = data.get("phone")
+    local_time = data.get("time", "09:00")
+    timezone = data.get("timezone", "America/New_York")
+
+    if not phone:
+        return jsonify({"error": "Missing phone"}), 400
+
+    db = SessionLocal()
+    try:
+        user = create_user(phone, local_time, timezone)
+        db.add(user)
+        db.commit()
+        return jsonify({"status": "ok", "utc_time": user.utc_time})
+    finally:
+        db.close()
 
 
 @app.route("/sms/inbound", methods=["POST"])
