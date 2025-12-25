@@ -28,14 +28,24 @@ def get_unseen_quotes(db, user):
 
 
 def send_quote_to_user(db, user):
-
     today = utc_today()
 
+    # Create log immediately so it always exists
+    log = MessageLog(
+        phone=user.phone,
+        quote=None,
+        status="pending",
+        timestamp=datetime.now(timezone.utc)
+    )
+    db.add(log)
+    db.commit()  # critical: log must exist before anything else
+
     if user.last_sent == today:
-        logger.info(f"Skipping {user.phone}, already sent today")
+        log.status = "skipped"
+        log.error = "already sent today"
+        db.commit()
         return
 
-    # Initialize cycle if needed
     if not user.cycle:
         user.cycle = 1
 
@@ -44,10 +54,13 @@ def send_quote_to_user(db, user):
         user.cycle += 1
         unseen = get_unseen_quotes(db, user)
         if not unseen:
-            logger.warning("No quotes available")
+            log.status = "failed"
+            log.error = "no quotes available"
+            db.commit()
             return
 
     quote = random.choice(unseen)
+    log.quote = quote.text
 
     try:
         # FORCE FAILURE FOR TESTING
@@ -63,24 +76,12 @@ def send_quote_to_user(db, user):
         ))
 
         user.last_sent = today
-        
-        db.add(MessageLog(
-            phone=user.phone,
-            quote=quote.text,
-            status="success",
-            timestamp=datetime.now(timezone.utc)
-        ))
+        log.status = "success"
 
     except Exception as e:
         logger.exception(f"Failed to send to {user.phone}")
-
-        db.add(MessageLog(
-            phone=user.phone,
-            quote=quote.text,
-            status="failed",
-            error=str(e),
-            timestamp=datetime.now(timezone.utc)
-        ))
+        log.status = "failed"
+        log.error = str(e)
 
     db.commit()
 
