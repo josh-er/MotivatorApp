@@ -8,6 +8,7 @@ from Motivator.db import SessionLocal
 from Motivator.models import User, Quote, SentQuote, MessageLog
 from .send_sms import send_sms
 
+logging.error("### IMPORTED send_now.py MODULE ###")
 # ----------------------------------------------------------------------
 # Logging setup
 # ----------------------------------------------------------------------
@@ -26,6 +27,7 @@ logger.addHandler(logging.StreamHandler())
 # Main send loop
 # ----------------------------------------------------------------------
 def send_now():
+    logging.error("### EXECUTING send_now.py send function ###")
     db = SessionLocal()
     logger.info("---- Starting Motivator send cycle ----")
 

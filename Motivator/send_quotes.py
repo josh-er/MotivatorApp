@@ -113,6 +113,8 @@ def send_quotes():
 
 
 def send_now(phone: str):
+    import logging
+    logging.error("### EXECUTING send_quotes.send_now ###")    
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.phone == phone).first()
