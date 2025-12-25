@@ -39,10 +39,6 @@ def send_quote_to_user(db, user):
     if not user.cycle:
         user.cycle = 1
 
-    # Mark as sent first
-    user.last_sent = today
-    db.flush()
-
     unseen = get_unseen_quotes(db, user)
     if not unseen:
         user.cycle += 1
@@ -66,6 +62,8 @@ def send_quote_to_user(db, user):
             cycle=user.cycle
         ))
 
+        user.last_sent = today
+        
         db.add(MessageLog(
             phone=user.phone,
             quote=quote.text,
