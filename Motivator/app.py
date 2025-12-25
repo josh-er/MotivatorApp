@@ -241,7 +241,7 @@ def admin_test_send():
                 "reason": "already sent today"
             }), 200
 
-        send_quote_to_user(db, user, today)
+        send_quote_to_user(db, user)
         db.commit()
 
         return jsonify({
