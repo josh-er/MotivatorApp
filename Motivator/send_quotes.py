@@ -33,11 +33,12 @@ def send_quote_to_user(db, user):
     # Create log immediately so it always exists
     log = MessageLog(
         phone=user.phone,
-        quote=None,
+        quote="",
         status="pending",
         timestamp=datetime.now(timezone.utc)
     )
     db.add(log)
+    print("SEND_QUOTES ENGINE:", db.get_bind().url)
     db.commit()  # critical: log must exist before anything else
 
     if user.last_sent == today:
@@ -115,6 +116,7 @@ def send_now(phone: str):
     import logging
     logging.error("### EXECUTING send_quotes.send_now ###")    
     db = SessionLocal()
+    print("SEND_NOW DB URL:", db.get_bind().url)
     try:
         user = db.query(User).filter(User.phone == phone).first()
         if not user:

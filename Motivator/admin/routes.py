@@ -14,6 +14,8 @@ def users():
 @admin_bp.route("/logs")
 @require_admin_key
 def logs():
+    from Motivator.db import engine
+    print("ADMIN DB URL:", engine.url)
     status = request.args.get("status")
     phone = request.args.get("phone")
     limit = int(request.args.get("limit", 100))
