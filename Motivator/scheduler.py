@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from Motivator.db import SessionLocal
 from Motivator.models import User
-from Motivator.send_now import send_now
+from Motivator.send_quotes import send_quotes
 
 CHECK_INTERVAL = 60  # seconds — check every minute
 
@@ -33,7 +33,7 @@ def run_scheduler():
 
             if due_users:
                 logger.info(f"{len(due_users)} user(s) scheduled for {now}, triggering send_now()...")
-                send_now()
+                send_quotes()
             else:
                 logger.debug(f"No users scheduled for {now}")
 
