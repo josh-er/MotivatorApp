@@ -55,7 +55,7 @@ def send_quote_to_user(db, user, today):
     db.commit()  # ensure the log exists even if send_sms fails
 
     try:
-        send_sms(user.phone, quote.text)
+        raise RuntimeError("FORCED TEST FAILURE")
         logger.info(f"Sent to {user.phone}: {quote.text}")
         log.status = "success"
 
