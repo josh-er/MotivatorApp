@@ -15,7 +15,7 @@
   </thead>
   <tbody>
     {% for log in logs %}
-    <tr class="{% if log.status != 'sent' %}table-warning{% endif %}">
+    <tr class="{% if log.status == 'failed' %}table-danger{% endif %}">
       <td>{{ log.timestamp.strftime("%Y-%m-%d %H:%M:%S") if log.timestamp else "-" }}</td>
       <td>{{ log.phone }}</td>
       <td>
