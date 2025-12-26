@@ -3,6 +3,29 @@
 
 <h2>Message Logs</h2>
 
+<form method="get" action="/admin/logs" class="mb-3">
+  <div class="row g-2">
+    <div class="col-auto">
+      <select name="status" class="form-select">
+        <option value="">All Statuses</option>
+        <option value="success" {% if request.args.get('status')=='success' %}selected{% endif %}>Success</option>
+        <option value="failed" {% if request.args.get('status')=='failed' %}selected{% endif %}>Failed</option>
+        <option value="skipped" {% if request.args.get('status')=='skipped' %}selected{% endif %}>Skipped</option>
+        <option value="pending" {% if request.args.get('status')=='pending' %}selected{% endif %}>Pending</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <input type="text" name="phone" placeholder="Phone" value="{{ request.args.get('phone','') }}" class="form-control">
+    </div>
+    <div class="col-auto">
+      <input type="date" name="since_date" value="{{ request.args.get('since_date','') }}" class="form-control">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Filter</button>
+    </div>
+  </div>
+</form>
+
 <table class="table table-sm table-striped">
   <thead>
     <tr>

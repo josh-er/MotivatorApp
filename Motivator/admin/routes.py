@@ -2,7 +2,7 @@ from flask import Blueprint, render_template
 from .auth import require_admin_key
 from .services import get_all_users, get_message_logs
 from flask import request
-from datetime import date
+from datetime import datetime, date
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -21,11 +21,7 @@ def logs():
     status = request.args.get("status")
     phone = request.args.get("phone")
     limit = int(request.args.get("limit", 100))
-    
-    # Default to today
     since_date = request.args.get("since_date")
-    if not since_date:
-        since_date = date.today()
 
     logs = get_message_logs(
         status=status,
