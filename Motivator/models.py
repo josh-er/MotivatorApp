@@ -46,7 +46,7 @@ class MessageLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     phone = Column(String, nullable=False)
-    quote = Column(String, nullable=False)
+    quote = Column(String, nullable=True)
     status = Column(String, default="success")
     error = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)

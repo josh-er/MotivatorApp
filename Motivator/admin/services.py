@@ -12,7 +12,7 @@ def get_all_users():
     finally:
         db.close()
 
-def get_message_logs(status=None, phone=None, limit=100):
+def get_message_logs(status=None, phone=None, limit=100, since_date=None):
     db = SessionLocal()
     try:
         q = db.query(MessageLog)
@@ -22,6 +22,9 @@ def get_message_logs(status=None, phone=None, limit=100):
 
         if phone:
             q = q.filter(MessageLog.phone.contains(phone))
+
+        if since_date:
+            q = q.filter(MessageLog.timestamp >= since_date)
 
         return (
             q.order_by(MessageLog.timestamp.desc())
