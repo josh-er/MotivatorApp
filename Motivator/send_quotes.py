@@ -65,7 +65,7 @@ def send_quote_to_user(db, user):
 
     try:
         # FORCE FAILURE FOR TESTING
-        raise RuntimeError("FORCED TEST FAILURE")
+        # raise RuntimeError("FORCED TEST FAILURE")
 
         send_sms(user.phone, quote.text)
 
