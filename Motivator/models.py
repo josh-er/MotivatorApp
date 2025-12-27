@@ -56,8 +56,8 @@ class SentQuote(Base):
     __tablename__ = "sent_quotes"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    quote_id = Column(Integer, ForeignKey("quotes.id", ondelete="CASCADE"), nullable=False)
     sent_date = Column(DateTime, default=datetime.utcnow)
     cycle = Column(Integer, nullable=False)
 

@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block content %}
+
+<h2>Quotes</h2>
+
+<form method="post" action="/admin/quotes/add">
+    <input name="text" placeholder="Quote text" required>
+    <button type="submit">Add Quote</button>
+</form>
+
+<table class="table table-sm table-striped mt-3">
+  <thead>
+    <tr>
+      <th>Quote</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for quote in quotes %}
+    <tr>
+      <td>{{ quote.text }}</td>
+      <td>
+        <form method="post" action="/admin/quotes/delete/{{ quote.id }}">
+          <button type="submit">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
