@@ -14,6 +14,7 @@ ADMIN_KEY = os.getenv("ADMIN_KEY")
 ENV = os.getenv("ENV", "development")
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret")
 app.register_blueprint(admin_bp)
 
 def require_admin(req):

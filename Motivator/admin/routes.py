@@ -55,7 +55,7 @@ def add_user():
         if db.query(User).filter_by(phone=phone).first():
             flash("User already exists", "warning")
         else:
-            db.add(User(phone=phone))
+            db.add(User(phone=phone, time="09:00"))
             try:
                 db.commit()
                 flash(f"User {phone} added", "success")
