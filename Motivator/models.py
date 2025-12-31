@@ -26,8 +26,8 @@ class User(Base):
     cycle = Column(Integer, default=1, nullable=False)
     last_quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
 
-    opted_in = Column(Boolean, default=True)
-    received_compliance = Column(Boolean, default=False)
+    opted_in = Column(Boolean, nullable=False, default=True)
+    received_compliance = Column(Boolean, nullable=False, default=False)
 
     sent_quotes = relationship("SentQuote", back_populates="user")
 
