@@ -4,6 +4,7 @@ from Motivator.db import SessionLocal
 from Motivator.models import User, Quote
 from datetime import datetime, date
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -55,8 +56,11 @@ def quotes():
 @require_admin_login
 def add_user():
     phone = request.form.get("phone")
-    if not phone:
-        flash("Phone required", "danger")
+    local_time = request.form.get("local_time")  # HH:MM from <input type="time">
+    timezone = request.form.get("timezone") or "America/New_York"
+
+    if not phone or not local_time:
+        flash("Phone and time are required", "danger")
         return redirect(url_for("admin.users"))
 
     db = SessionLocal()
@@ -65,40 +69,37 @@ def add_user():
             flash("User already exists", "warning")
             return redirect(url_for("admin.users"))
 
-        # --- defaults ---
-        local_time_str = "09:00"
-        timezone = "America/New_York"
-
-        # compute utc_time
-        from zoneinfo import ZoneInfo
-        local_dt = datetime.strptime(local_time_str, "%H:%M").replace(
-            year=2000, month=1, day=1, tzinfo=ZoneInfo(timezone)
-        )
-        utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
+        # compute utc_time immediately
+        try:
+            tz = ZoneInfo(timezone)
+            today_local = datetime.now(tz).date()
+            local_dt = datetime.combine(
+                today_local,
+                datetime.strptime(local_time, "%H:%M").time(),
+                tzinfo=tz,
+            )
+            utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
+        except Exception as e:
+            flash(f"Invalid time or timezone: {e}", "danger")
+            return redirect(url_for("admin.users"))
 
         user = User(
             phone=phone,
-            time=local_time_str,
+            local_time=local_time,
             timezone=timezone,
             utc_time=utc_time,
-            opted_in=True
+            opted_in=True,
+            received_compliance=False,
         )
 
         db.add(user)
         db.commit()
-
-        # --- compliance opt-in SMS ---
-        from Motivator.sms import send_sms
-        send_sms(
-            phone,
-            "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel."
-        )
-
-        flash(f"User {phone} added and opt-in message sent", "success")
+        flash(f"User {phone} added", "success")
 
     except Exception as e:
         db.rollback()
         flash(f"Error adding user: {e}", "danger")
+
     finally:
         db.close()
 

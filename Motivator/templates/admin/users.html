@@ -5,7 +5,8 @@
 
 <form method="post" action="/admin/users/add">
   <input type="text" name="phone" placeholder="Phone" required>
-  <input type="time" name="local_time" value="09:00" required>
+  <input type="time" name="local_time" required>
+  <input type="hidden" name="timezone" value="America/New_York">
   <button type="submit">Add User</button>
 </form>
 
