@@ -41,6 +41,18 @@ def send_quote_to_user(db, user):
     print("SEND_QUOTES ENGINE:", db.get_bind().url)
     db.commit()  # critical: log must exist before anything else
 
+    if not user.utc_time or not user.timezone:
+            log.status = "skipped"
+            log.error = "invalid schedule (missing utc_time or timezone)"
+            db.commit()
+            return
+
+    if not user.opted_in:
+        log.status = "skipped"
+        log.error = "user opted out"
+        db.commit()
+        return
+
     if user.last_sent == today:
         log.status = "skipped"
         log.error = "already sent today"
