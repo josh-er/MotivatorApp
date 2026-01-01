@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session, redirect, url_for, flash
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from sqlalchemy.exc import IntegrityError
@@ -141,6 +141,32 @@ def admin_test_send():
     finally:
         db.close()
 
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "testpass")
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        password = request.form.get("password")
+        if password == ADMIN_PASSWORD:
+            session["is_admin"] = True
+            flash("Logged in as admin", "success")
+            return redirect(url_for("admin.users"))
+        else:
+            flash("Incorrect password", "danger")
+    return """
+        <form method="post">
+            <input type="password" name="password" placeholder="Admin Password">
+            <button type="submit">Login</button>
+        </form>
+    """
+
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    flash("Logged out", "info")
+    return redirect(url_for("admin_login"))
+    
 
 # --- Development only routes ---
 if ENV != "production":

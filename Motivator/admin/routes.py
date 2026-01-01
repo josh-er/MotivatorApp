@@ -1,20 +1,29 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from .auth import require_admin_key
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from .services import get_all_users, get_message_logs
 from Motivator.db import SessionLocal
 from Motivator.models import User, Quote
 from datetime import datetime, date
+from functools import wraps
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
+def require_admin_login(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("is_admin"):
+            flash("Admin login required", "danger")
+            return redirect(url_for("admin_login"))  # redirect to login page
+        return f(*args, **kwargs)
+    return decorated
+
 @admin_bp.route("/users")
-@require_admin_key
+@require_admin_login
 def users():
     users = get_all_users()
     return render_template("admin/users.html", users=users)
 
 @admin_bp.route("/logs")
-@require_admin_key
+@require_admin_login
 def logs():
     from Motivator.db import engine
     print("ADMIN DB URL:", engine.url)
@@ -33,7 +42,7 @@ def logs():
     return render_template("admin/logs.html", logs=logs)
 
 @admin_bp.route("/quotes")
-@require_admin_key
+@require_admin_login
 def quotes():
     db = SessionLocal()
     try:
@@ -43,7 +52,7 @@ def quotes():
         db.close()
 
 @admin_bp.route("/users/add", methods=["POST"])
-@require_admin_key
+@require_admin_login
 def add_user():
     phone = request.form.get("phone")
     if not phone:
@@ -67,7 +76,7 @@ def add_user():
     return redirect(url_for("admin.users"))
 
 @admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
-@require_admin_key
+@require_admin_login
 def delete_user(user_id):
     db = SessionLocal()
     try:
@@ -87,7 +96,7 @@ def delete_user(user_id):
     return redirect(url_for("admin.users"))
 
 @admin_bp.route("/quotes/add", methods=["POST"])
-@require_admin_key
+@require_admin_login
 def add_quote():
     text = request.form.get("text")
     if not text:
@@ -108,7 +117,7 @@ def add_quote():
     return redirect(url_for("admin.quotes"))
 
 @admin_bp.route("/quotes/delete/<int:quote_id>", methods=["POST"])
-@require_admin_key
+@require_admin_login
 def delete_quote(quote_id):
     db = SessionLocal()
     try:
