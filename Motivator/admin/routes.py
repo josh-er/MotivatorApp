@@ -117,6 +117,7 @@ def delete_user(user_id):
                 flash(f"User {user.phone} deleted. All associated sent quotes removed.", "success")
             except Exception as e:
                 db.rollback()
+                print("DELETE FAILED:", e)
                 flash(f"Error deleting user: {e}", "danger")
         else:
             flash("User not found", "warning")
