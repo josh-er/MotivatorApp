@@ -63,16 +63,45 @@ def add_user():
     try:
         if db.query(User).filter_by(phone=phone).first():
             flash("User already exists", "warning")
-        else:
-            db.add(User(phone=phone, time="10:00"))
-            try:
-                db.commit()
-                flash(f"User {phone} added", "success")
-            except Exception as e:
-                db.rollback()
-                flash(f"Error adding user: {e}", "danger")
+            return redirect(url_for("admin.users"))
+
+        # --- defaults ---
+        local_time_str = "09:00"
+        timezone = "US/Eastern"  # change if needed
+
+        # compute utc_time
+        from zoneinfo import ZoneInfo
+        local_dt = datetime.strptime(local_time_str, "%H:%M").replace(
+            year=2000, month=1, day=1, tzinfo=ZoneInfo(timezone)
+        )
+        utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
+
+        user = User(
+            phone=phone,
+            time=local_time_str,
+            timezone=timezone,
+            utc_time=utc_time,
+            opted_in=True
+        )
+
+        db.add(user)
+        db.commit()
+
+        # --- compliance opt-in SMS ---
+        from Motivator.sms import send_sms
+        send_sms(
+            phone,
+            "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel."
+        )
+
+        flash(f"User {phone} added and opt-in message sent", "success")
+
+    except Exception as e:
+        db.rollback()
+        flash(f"Error adding user: {e}", "danger")
     finally:
         db.close()
+
     return redirect(url_for("admin.users"))
 
 @admin_bp.route("/users/delete/<int:user_id>", methods=["POST"])
