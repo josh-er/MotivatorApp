@@ -29,7 +29,7 @@ class User(Base):
     opted_in = Column(Boolean, nullable=False, default=True)
     received_compliance = Column(Boolean, nullable=False, default=False)
 
-    sent_quotes = relationship("SentQuote", back_populates="user")
+    sent_quotes = relationship("SentQuote", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class Quote(Base):
