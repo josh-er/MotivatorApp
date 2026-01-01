@@ -67,7 +67,7 @@ def add_user():
 
         # --- defaults ---
         local_time_str = "09:00"
-        timezone = "US/Eastern"  # change if needed
+        timezone = "America/New_York"
 
         # compute utc_time
         from zoneinfo import ZoneInfo
