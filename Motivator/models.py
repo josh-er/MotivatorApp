@@ -38,7 +38,7 @@ class Quote(Base):
     id = Column(Integer, primary_key=True, index=True)
     text = Column(String, nullable=False)
 
-    sent_quotes = relationship("SentQuote", back_populates="quote")
+    sent_quotes = relationship("SentQuote", back_populates="quote", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class MessageLog(Base):
