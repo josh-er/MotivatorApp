@@ -42,16 +42,36 @@ def send_quote_to_user(db, user):
     db.commit()  # critical: log must exist before anything else
 
     if not user.utc_time or not user.timezone:
-            log.status = "skipped"
-            log.error = "invalid schedule (missing utc_time or timezone)"
-            db.commit()
-            return
+        log.status = "skipped"
+        log.error = "invalid schedule (missing utc_time or timezone)"
+        db.commit()
+        return
 
     if not user.opted_in:
         log.status = "skipped"
         log.error = "user opted out"
         db.commit()
         return
+
+    if not user.received_compliance:
+        compliance_text = (
+            "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel."
+        )
+
+        log.quote = "[COMPLIANCE]"
+        try:
+            send_sms(user.phone, compliance_text)
+            user.received_compliance = True
+            log.status = "success"
+            db.commit()
+        except Exception as e:
+            log.status = "failed"
+            log.error = f"compliance send failed: {e}"
+            db.commit()
+
+        return
+
+    assert user.received_compliance, "Compliance must be sent before quotes"
 
     if user.last_sent == today:
         log.status = "skipped"

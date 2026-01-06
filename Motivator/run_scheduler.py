@@ -39,6 +39,12 @@ def recalc_all_user_utc_times():
         db.close()
 
 def send_quotes():
+    logging.warning(
+        "[Scheduler] send_quotes() in run_scheduler.py is disabled. "
+        "All sending must go through Motivator.send_quotes.send_quote_to_user()."
+    )
+    return
+    """
     now_utc = datetime.now(timezone.utc).strftime("%H:%M")
     today_utc = datetime.now(timezone.utc).date()
     logging.info(f"[Scheduler] Checking for users scheduled at {now_utc} UTC")
@@ -63,14 +69,6 @@ def send_quotes():
                 logging.warning("[Scheduler] No quotes available in DB.")
                 continue
 
-            # FIRST MESSAGE — compliance text (one-time)
-            if not user.received_compliance:
-                send_sms(user.phone, "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel.")
-                user.received_compliance = True
-                db.commit()
-                logging.info(f"[Scheduler] Sent compliance message to {user.phone}")
-                continue  # don't send the daily quote this minute
-
             # send the daily quote
             send_sms(user.phone, quote.text)
 
@@ -85,6 +83,7 @@ def send_quotes():
         logging.exception(f"[Scheduler] Error in send_quotes: {e}")
     finally:
         db.close()
+    """
 
 # Run send job every minute
 scheduler.add_job(send_quotes, "interval", minutes=1)
