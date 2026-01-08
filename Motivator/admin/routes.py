@@ -5,6 +5,7 @@ from Motivator.models import User, Quote
 from datetime import datetime, date
 from functools import wraps
 from zoneinfo import ZoneInfo
+from Motivator.send_quotes import send_compliance
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -94,6 +95,7 @@ def add_user():
 
         db.add(user)
         db.commit()
+        send_compliance(db, user)
         flash(f"User {phone} added", "success")
 
     except Exception as e:

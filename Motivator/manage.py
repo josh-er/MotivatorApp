@@ -5,6 +5,7 @@ from Motivator.models import User, Quote
 from Motivator.user_service import create_user
 from .send_quotes import send_now
 from sqlalchemy.exc import IntegrityError
+from Motivator.send_quotes import send_compliance
 
 def add_user(phone, local_time, timezone):
     db = SessionLocal()
@@ -12,6 +13,7 @@ def add_user(phone, local_time, timezone):
         user = create_user(phone, local_time, timezone)
         db.add(user)
         db.commit()
+        send_compliance(db, user)
         print(
             f"Added user {phone} "
             f"@ {user.local_time} ({user.timezone}, UTC: {user.utc_time})"

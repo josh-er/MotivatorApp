@@ -12,6 +12,38 @@ logger = logging.getLogger(__name__)
 def utc_today():
     return datetime.now(timezone.utc).date()
 
+def send_compliance(db, user):
+    user = db.get(User, user.id)
+    
+    if not user.phone:
+        return
+
+    if user.received_compliance or not user.opted_in:
+        return
+
+    text = (
+        "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel."
+    )
+
+    log = MessageLog(
+        phone=user.phone,
+        quote="[COMPLIANCE]",
+        status="pending",
+        timestamp=datetime.now(timezone.utc)
+    )
+    db.add(log)
+    db.commit()
+
+    try:
+        send_sms(user.phone, text)
+        user.received_compliance = True
+        log.status = "success"
+    except Exception as e:
+        log.status = "failed"
+        log.error = str(e)
+
+    db.commit()
+
 
 def get_unseen_quotes(db, user):
     all_quotes = db.query(Quote).all()
@@ -38,7 +70,7 @@ def send_quote_to_user(db, user):
         timestamp=datetime.now(timezone.utc)
     )
     db.add(log)
-    print("SEND_QUOTES ENGINE:", db.get_bind().url)
+    # print("SEND_QUOTES ENGINE:", db.get_bind().url)
     db.commit()  # critical: log must exist before anything else
 
     if not user.utc_time or not user.timezone:
@@ -51,24 +83,6 @@ def send_quote_to_user(db, user):
         log.status = "skipped"
         log.error = "user opted out"
         db.commit()
-        return
-
-    if not user.received_compliance:
-        compliance_text = (
-            "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel."
-        )
-
-        log.quote = "[COMPLIANCE]"
-        try:
-            send_sms(user.phone, compliance_text)
-            user.received_compliance = True
-            log.status = "success"
-            db.commit()
-        except Exception as e:
-            log.status = "failed"
-            log.error = f"compliance send failed: {e}"
-            db.commit()
-
         return
 
     assert user.received_compliance, "Compliance must be sent before quotes"
@@ -148,7 +162,7 @@ def send_now(phone: str):
     import logging
     logging.error("### EXECUTING send_quotes.send_now ###")    
     db = SessionLocal()
-    print("SEND_NOW DB URL:", db.get_bind().url)
+    # print("SEND_NOW DB URL:", db.get_bind().url)
     try:
         user = db.query(User).filter(User.phone == phone).first()
         if not user:
