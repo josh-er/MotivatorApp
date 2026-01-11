@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, Boolean
 from sqlalchemy.orm import declarative_base, relationship
-from datetime import datetime
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -45,11 +45,13 @@ class MessageLog(Base):
     __tablename__ = "message_logs"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
     phone = Column(String, nullable=False)
     quote = Column(String, nullable=True)
     status = Column(String, default="success")
     error = Column(String, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class SentQuote(Base):
@@ -58,7 +60,7 @@ class SentQuote(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     quote_id = Column(Integer, ForeignKey("quotes.id", ondelete="CASCADE"), nullable=False)
-    sent_date = Column(DateTime, default=datetime.utcnow)
+    sent_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     cycle = Column(Integer, nullable=False)
 
     user = relationship("User", back_populates="sent_quotes")
@@ -67,3 +69,16 @@ class SentQuote(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "quote_id", "cycle", name="_user_quote_cycle_uc"),
     )
+
+
+class SettingsToken(Base):
+    __tablename__ = "settings_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    token = Column(String, unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User")
