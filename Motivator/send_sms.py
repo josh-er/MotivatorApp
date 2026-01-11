@@ -2,7 +2,7 @@
 import os
 from twilio.rest import Client
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
 from Motivator.db import SessionLocal
 from Motivator.models import MessageLog
 
@@ -41,7 +41,7 @@ def send_sms(to_number: str, message: str):
                 quote=message,
                 status="failed",
                 error=str(e),
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             db.add(log)
             db.commit()
