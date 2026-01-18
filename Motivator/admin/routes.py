@@ -173,55 +173,70 @@ def delete_quote(quote_id):
 
 @settings_bp.route("/request-settings-link", methods=["POST"])
 def request_settings_link():
-    user_id = 7  # temp
+    data = request.get_json()
+    phone = data.get("phone")
+    if not phone:
+        abort(400, "Missing phone")
 
-    token = generate_settings_token(user_id)
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter_by(phone=phone).first()
+        if not user:
+            abort(404, "User not found")
 
-    link = f"http://localhost:5000/settings?token={token}"
+        token = generate_settings_token(user.id)
 
-    return jsonify({"settings_link": link}), 200
+        link = f"http://localhost:5000/settings?token={token}"
 
+        return jsonify({"settings_link": link}), 200
+    finally:
+        db.close()
+
+# ---------- SETTINGS HTML ----------
 @settings_bp.route("/settings", methods=["GET"])
 def settings_page():
+    token_value = request.args.get("token")
+    if not token_value:
+        abort(400, "Missing token")
+    return render_template("settings.html", token=token_value)
+
+# ---------- SETTINGS API (PREFILL) ----------
+@settings_bp.route("/api/settings", methods=["GET"])
+def get_settings():
     token_value = request.args.get("token")
     if not token_value:
         abort(400, "Missing token")
 
     db = SessionLocal()
     try:
-        token = (
-            db.query(SettingsToken)
-            .filter_by(token=token_value)
-            .first()
-        )
-
+        token = db.query(SettingsToken).filter_by(token=token_value).first()
         if not token:
             abort(404, "Invalid token")
-
         if token.used:
             abort(403, "Token already used")
 
-        # Convert aware -> naive UTC to match DB column
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-
         if token.expires_at < now:
             abort(403, "Token expired")
 
-        return jsonify({
-            "status": "token valid",
-            "user_id": token.user_id
-        })
+        user = db.query(User).get(token.user_id)
+        if not user:
+            abort(404, "User not found")
 
+        return jsonify({
+            "user_id": user.id,
+            "local_time": user.local_time,
+            "timezone": user.timezone,
+            "opted_in": user.opted_in
+        })
     finally:
         db.close()
 
+# ---------- SETTINGS UPDATE ----------
 @settings_bp.route("/settings", methods=["POST"])
 def update_settings():
     data = request.get_json()
     token_value = data.get("token")
-    local_time = data.get("local_time")
-    timezone_str = data.get("timezone")
-    opted_in = data.get("opted_in")
 
     if not token_value:
         abort(400, "Missing token")
@@ -233,44 +248,37 @@ def update_settings():
             abort(404, "Invalid token")
         if token.used:
             abort(403, "Token already used")
-        
-        # Convert aware -> naive UTC to match DB column
+
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         if token.expires_at < now:
             abort(403, "Token expired")
 
-        # Mark token as used
-        db.query(SettingsToken).filter_by(id=token.id).update({"used": True})
-
-        # Update user settings
         user = db.query(User).get(token.user_id)
         if not user:
             abort(404, "User not found")
 
-        if local_time:
-            user.local_time = local_time
-            if timezone_str:
-                user.timezone = timezone_str
-            else:
-                timezone_str = user.timezone or "UTC"
+        local_time = data.get("local_time")
+        timezone_str = data.get("timezone") or user.timezone
+        opted_in = data.get("opted_in")
 
-            # recalc UTC time
-            try:
-                tz = ZoneInfo(timezone_str)
-                today_local = datetime.now(tz).date()
-                local_dt = datetime.combine(
-                    today_local,
-                    datetime.strptime(local_time, "%H:%M").time(),
-                    tzinfo=tz
-                )
-                user.utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
-            except Exception as e:
-                abort(400, f"Invalid local_time or timezone: {e}")
+        if local_time:
+            tz = ZoneInfo(timezone_str)
+            today_local = datetime.now(tz).date()
+            local_dt = datetime.combine(
+                today_local,
+                datetime.strptime(local_time, "%H:%M").time(),
+                tzinfo=tz
+            )
+            user.local_time = local_time
+            user.timezone = timezone_str
+            user.utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
 
         if opted_in is not None:
             user.opted_in = bool(opted_in)
 
+        token.used = True
         db.commit()
+
         return jsonify({
             "status": "settings updated",
             "user_id": user.id,

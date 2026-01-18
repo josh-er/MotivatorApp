@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Update Settings</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px; }
+    label { display: block; margin-top: 10px; }
+    input, select { margin-top: 5px; }
+    button { margin-top: 15px; }
+    #message { margin-top: 20px; font-weight: bold; }
+    .disabled { opacity: 0.6; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <h1>Update Your Settings</h1>
+
+  <form id="settings-form">
+    <label>
+      Local Time:
+      <input type="time" id="local_time" required>
+    </label>
+
+    <label>
+      Timezone:
+      <select id="timezone">
+        <option value="America/New_York">America/New_York</option>
+        <option value="America/Chicago">America/Chicago</option>
+        <option value="America/Denver">America/Denver</option>
+        <option value="America/Los_Angeles">America/Los_Angeles</option>
+      </select>
+    </label>
+
+    <label>
+      <input type="checkbox" id="opted_in">
+      Receive motivational quotes
+    </label>
+
+    <button type="submit">Save</button>
+  </form>
+
+  <div id="message"></div>
+
+  <script>
+    const form = document.getElementById('settings-form');
+    const messageEl = document.getElementById('message');
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    function disableForm(text) {
+      form.classList.add('disabled');
+      messageEl.innerText = text;
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch(`/api/settings?token=${token}`);
+
+        if (res.status === 403) {
+          disableForm('This settings link has already been used.');
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error();
+        }
+
+        const data = await res.json();
+        document.getElementById('local_time').value = data.local_time;
+        document.getElementById('timezone').value = data.timezone;
+        document.getElementById('opted_in').checked = data.opted_in;
+
+      } catch {
+        disableForm('Error loading settings.');
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const res = await fetch('/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token,
+            local_time: document.getElementById('local_time').value,
+            timezone: document.getElementById('timezone').value,
+            opted_in: document.getElementById('opted_in').checked
+          })
+        });
+
+        if (res.status === 403) {
+          disableForm('This settings link has already been used.');
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error();
+        }
+
+        disableForm('Your settings have been saved successfully.');
+
+      } catch {
+        messageEl.innerText = 'Error updating settings.';
+      }
+    });
+
+    loadSettings();
+  </script>
+</body>
+</html>
