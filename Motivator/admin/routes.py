@@ -1,13 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, abort
+from Motivator.utils.tokens import generate_settings_token
 from .services import get_all_users, get_message_logs
 from Motivator.db import SessionLocal
-from Motivator.models import User, Quote
-from datetime import datetime, date
+from Motivator.models import User, Quote, SettingsToken
+from datetime import datetime, date, timezone
 from functools import wraps
 from zoneinfo import ZoneInfo
 from Motivator.send_quotes import send_compliance
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+settings_bp = Blueprint("settings", __name__)
 
 def require_admin_login(f):
     @wraps(f)
@@ -168,3 +170,114 @@ def delete_quote(quote_id):
     finally:
         db.close()
     return redirect(url_for("admin.quotes"))
+
+@settings_bp.route("/request-settings-link", methods=["POST"])
+def request_settings_link():
+    user_id = 7  # temp
+
+    token = generate_settings_token(user_id)
+
+    link = f"http://localhost:5000/settings?token={token}"
+
+    return jsonify({"settings_link": link}), 200
+
+@settings_bp.route("/settings", methods=["GET"])
+def settings_page():
+    token_value = request.args.get("token")
+    if not token_value:
+        abort(400, "Missing token")
+
+    db = SessionLocal()
+    try:
+        token = (
+            db.query(SettingsToken)
+            .filter_by(token=token_value)
+            .first()
+        )
+
+        if not token:
+            abort(404, "Invalid token")
+
+        if token.used:
+            abort(403, "Token already used")
+
+        # Convert aware -> naive UTC to match DB column
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        if token.expires_at < now:
+            abort(403, "Token expired")
+
+        return jsonify({
+            "status": "token valid",
+            "user_id": token.user_id
+        })
+
+    finally:
+        db.close()
+
+@settings_bp.route("/settings", methods=["POST"])
+def update_settings():
+    data = request.get_json()
+    token_value = data.get("token")
+    local_time = data.get("local_time")
+    timezone_str = data.get("timezone")
+    opted_in = data.get("opted_in")
+
+    if not token_value:
+        abort(400, "Missing token")
+
+    db = SessionLocal()
+    try:
+        token = db.query(SettingsToken).filter_by(token=token_value).first()
+        if not token:
+            abort(404, "Invalid token")
+        if token.used:
+            abort(403, "Token already used")
+        
+        # Convert aware -> naive UTC to match DB column
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if token.expires_at < now:
+            abort(403, "Token expired")
+
+        # Mark token as used
+        db.query(SettingsToken).filter_by(id=token.id).update({"used": True})
+
+        # Update user settings
+        user = db.query(User).get(token.user_id)
+        if not user:
+            abort(404, "User not found")
+
+        if local_time:
+            user.local_time = local_time
+            if timezone_str:
+                user.timezone = timezone_str
+            else:
+                timezone_str = user.timezone or "UTC"
+
+            # recalc UTC time
+            try:
+                tz = ZoneInfo(timezone_str)
+                today_local = datetime.now(tz).date()
+                local_dt = datetime.combine(
+                    today_local,
+                    datetime.strptime(local_time, "%H:%M").time(),
+                    tzinfo=tz
+                )
+                user.utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
+            except Exception as e:
+                abort(400, f"Invalid local_time or timezone: {e}")
+
+        if opted_in is not None:
+            user.opted_in = bool(opted_in)
+
+        db.commit()
+        return jsonify({
+            "status": "settings updated",
+            "user_id": user.id,
+            "local_time": user.local_time,
+            "timezone": user.timezone,
+            "utc_time": user.utc_time,
+            "opted_in": user.opted_in
+        })
+    finally:
+        db.close()

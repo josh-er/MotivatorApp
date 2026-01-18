@@ -80,5 +80,6 @@ class SettingsToken(Base):
     token = Column(String, unique=True, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    used = Column(Boolean, nullable=False, default=False)
 
     user = relationship("User")
