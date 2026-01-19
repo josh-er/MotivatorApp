@@ -2,10 +2,10 @@
 import time
 import logging
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
+from datetime import datetime, timezone
 from Motivator.db import SessionLocal
 from Motivator.models import User
-from Motivator.send_quotes import send_quotes
+from Motivator.send_quotes import send_users
 
 CHECK_INTERVAL = 60  # seconds — check every minute
 
@@ -28,14 +28,24 @@ def run_scheduler():
     while True:
         try:
             db = SessionLocal()
-            now = datetime.now().strftime("%H:%M")
-            due_users = db.query(User).filter(User.utc_time == now).all()
+            now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+            current_time = now_utc.strftime("%H:%M")
+            today = now_utc.date()
+
+            due_users = (
+                db.query(User)
+                .filter(User.utc_time == current_time)
+                .filter((User.last_sent.is_(None)) | (User.last_sent != today))
+                .all()
+            )
 
             if due_users:
-                logger.info(f"{len(due_users)} user(s) scheduled for {now}, triggering send_now()...")
-                send_quotes()
+                logger.info(
+                    f"{len(due_users)} user(s) scheduled for {current_time}, sending quotes"
+                )
+                send_users(db, due_users)
             else:
-                logger.debug(f"No users scheduled for {now}")
+                logger.debug(f"No users scheduled for {current_time}")
 
         except Exception as e:
             logger.exception(f"Scheduler loop failed: {e}")

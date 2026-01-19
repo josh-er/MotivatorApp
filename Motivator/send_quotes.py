@@ -110,8 +110,9 @@ def send_quote_to_user(db, user):
     log.quote = quote.text
 
     try:
-        # FORCE FAILURE FOR TESTING
-        # raise RuntimeError("FORCED TEST FAILURE")
+        # Mark sent BEFORE sending to avoid double send on crash
+        user.last_sent = today
+        db.commit()
 
         send_sms(user.phone, quote.text)
 
@@ -122,7 +123,6 @@ def send_quote_to_user(db, user):
             cycle=user.cycle
         ))
 
-        user.last_sent = today
         log.status = "success"
 
     except Exception as e:
@@ -132,7 +132,7 @@ def send_quote_to_user(db, user):
 
     db.commit()
 
-
+'''
 def send_quotes():
     now = datetime.now(timezone.utc)
     current_time = now.strftime("%H:%M")
@@ -156,7 +156,7 @@ def send_quotes():
 
     finally:
         db.close()
-
+'''
 
 def send_now(phone: str):
     import logging
@@ -173,3 +173,13 @@ def send_now(phone: str):
 
     finally:
         db.close()
+
+def send_users(db, users):
+    """
+    Send quotes to a pre-selected list of users.
+    Scheduler is responsible for time logic.
+    """
+    logger.info(f"Sending quotes to {len(users)} users")
+
+    for user in users:
+        send_quote_to_user(db, user)
