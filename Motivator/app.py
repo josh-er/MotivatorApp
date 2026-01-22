@@ -60,7 +60,6 @@ def submit():
         db.commit()
         return jsonify({
             "status": "success",
-            "utc_time": user.utc_time,
             "timezone": user.timezone
         }), 201
 
@@ -196,7 +195,6 @@ if ENV != "production":
                 "phone": u.phone,
                 "local_time": u.local_time,
                 "timezone": u.timezone,
-                "utc_time": u.utc_time,
                 "last_sent": u.last_sent
             }
             for u in users

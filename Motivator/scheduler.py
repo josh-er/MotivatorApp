@@ -3,6 +3,7 @@ import time
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from Motivator.db import SessionLocal
 from Motivator.models import User
 from Motivator.send_quotes import send_users
@@ -21,6 +22,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # -------------------------------------------------
+# Scheduling logic
+# -------------------------------------------------
+def is_user_due(now_utc: datetime, user: User) -> bool:
+    if not user.preferred_time or not user.timezone:
+        logger.debug(f"User {user.id} missing preferred_time or timezone")
+        return False
+
+    tz = ZoneInfo(user.timezone)
+    local_now = now_utc.astimezone(tz)
+    local_today = local_now.date()
+
+    if user.last_sent == local_today:
+        logger.debug(f"User {user.id} already sent today ({local_today})")
+        return False
+
+    send_hour, send_minute = map(int, user.preferred_time.split(":"))
+
+    scheduled_local = local_now.replace(
+        hour=send_hour,
+        minute=send_minute,
+        second=0,
+        microsecond=0,
+    )
+
+    # If worker was down, send late but only once per local day
+    return local_now >= scheduled_local
+
+# -------------------------------------------------
 # Scheduler loop
 # -------------------------------------------------
 def run_scheduler():
@@ -28,24 +57,23 @@ def run_scheduler():
     while True:
         try:
             db = SessionLocal()
-            now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-            current_time = now_utc.strftime("%H:%M")
-            today = now_utc.date()
+            now_utc = datetime.now(timezone.utc)
 
-            due_users = (
+            users = (
                 db.query(User)
-                .filter(User.utc_time == current_time)
-                .filter((User.last_sent.is_(None)) | (User.last_sent != today))
+                .filter(User.opted_in.is_(True))
                 .all()
             )
 
+            due_users = [u for u in users if is_user_due(now_utc, u)]
+
             if due_users:
                 logger.info(
-                    f"{len(due_users)} user(s) scheduled for {current_time}, sending quotes"
+                    f"{len(due_users)} user(s) due — sending quotes"
                 )
                 send_users(db, due_users)
             else:
-                logger.debug(f"No users scheduled for {current_time}")
+                logger.debug("No users due this minute")
 
         except Exception as e:
             logger.exception(f"Scheduler loop failed: {e}")

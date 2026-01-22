@@ -76,12 +76,6 @@ def add_user():
         try:
             tz = ZoneInfo(timezone)
             today_local = datetime.now(tz).date()
-            local_dt = datetime.combine(
-                today_local,
-                datetime.strptime(local_time, "%H:%M").time(),
-                tzinfo=tz,
-            )
-            utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
         except Exception as e:
             flash(f"Invalid time or timezone: {e}", "danger")
             return redirect(url_for("admin.users"))
@@ -90,7 +84,6 @@ def add_user():
             phone=phone,
             local_time=local_time,
             timezone=timezone,
-            utc_time=utc_time,
             opted_in=True,
             received_compliance=False,
         )
@@ -271,7 +264,6 @@ def update_settings():
             )
             user.local_time = local_time
             user.timezone = timezone_str
-            user.utc_time = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
 
         if opted_in is not None:
             user.opted_in = bool(opted_in)

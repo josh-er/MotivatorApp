@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from Motivator.db import SessionLocal
 from Motivator.models import User, Quote, MessageLog, SentQuote
 from .send_sms import send_sms
+from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,22 +61,44 @@ def get_unseen_quotes(db, user):
 
 
 def send_quote_to_user(db, user):
-    today = utc_today()
+    # --- compute LOCAL today ---
+    try:
+        user_tz = ZoneInfo(user.timezone)
+    except Exception:
+        log = MessageLog(
+            phone=user.phone,
+            quote="",
+            status="skipped",
+            error="invalid timezone",
+            timestamp=datetime.now(timezone.utc),
+        )
+        db.add(log)
+        db.commit()
+        return
 
-    # Create log immediately so it always exists
+
+    
+    # for testing DST now_utc = datetime(2025, 11, 2, 12, 0, tzinfo=timezone.utc)
+    now_utc = datetime.now(timezone.utc)
+    local_now = now_utc.astimezone(user_tz)
+    local_today = local_now.date()
+    # line below for testing
+    # logger.info(f"LOCAL_NOW={local_now}, LOCAL_TODAY={local_today}")
+
+    # --- create log immediately ---
     log = MessageLog(
         phone=user.phone,
         quote="",
         status="pending",
-        timestamp=datetime.now(timezone.utc)
+        timestamp=now_utc,
     )
     db.add(log)
-    # print("SEND_QUOTES ENGINE:", db.get_bind().url)
-    db.commit()  # critical: log must exist before anything else
+    db.commit()
 
-    if not user.utc_time or not user.timezone:
+    # --- guards ---
+    if not user.local_time or not user.timezone:
         log.status = "skipped"
-        log.error = "invalid schedule (missing utc_time or timezone)"
+        log.error = "invalid schedule (missing preferred_time or timezone)"
         db.commit()
         return
 
@@ -85,14 +108,21 @@ def send_quote_to_user(db, user):
         db.commit()
         return
 
-    assert user.received_compliance, "Compliance must be sent before quotes"
-
-    if user.last_sent == today:
+    if not user.received_compliance:
         log.status = "skipped"
-        log.error = "already sent today"
+        log.error = "compliance not sent"
         db.commit()
         return
 
+    if user.last_sent == local_today:
+        log.status = "skipped"
+        log.error = "already sent today (local)"
+        db.commit()
+        # logger.info line is for testing
+        # logger.info(f"Skipped {user.phone}: already sent today (local)")
+        return
+
+    # --- quote selection ---
     if not user.cycle:
         user.cycle = 1
 
@@ -110,18 +140,20 @@ def send_quote_to_user(db, user):
     log.quote = quote.text
 
     try:
-        # Mark sent BEFORE sending to avoid double send on crash
-        user.last_sent = today
+        # mark sent BEFORE SMS to guarantee idempotency
+        user.last_sent = local_today
         db.commit()
 
         send_sms(user.phone, quote.text)
 
-        db.add(SentQuote(
-            user_id=user.id,
-            quote_id=quote.id,
-            sent_date=datetime.now(timezone.utc),
-            cycle=user.cycle
-        ))
+        db.add(
+            SentQuote(
+                user_id=user.id,
+                quote_id=quote.id,
+                sent_date=now_utc,  # always UTC timestamp
+                cycle=user.cycle,
+            )
+        )
 
         log.status = "success"
 
@@ -132,31 +164,6 @@ def send_quote_to_user(db, user):
 
     db.commit()
 
-'''
-def send_quotes():
-    now = datetime.now(timezone.utc)
-    current_time = now.strftime("%H:%M")
-    today = utc_today()
-
-    logger.info(f"Running send_quotes at {current_time}")
-
-    db = SessionLocal()
-    try:
-        users = (
-            db.query(User)
-            .filter(User.utc_time == current_time)
-            .filter((User.last_sent.is_(None)) | (User.last_sent != today))
-            .all()
-        )
-
-        logger.info(f"Found {len(users)} eligible users")
-
-        for user in users:
-            send_quote_to_user(db, user)
-
-    finally:
-        db.close()
-'''
 
 def send_now(phone: str):
     import logging

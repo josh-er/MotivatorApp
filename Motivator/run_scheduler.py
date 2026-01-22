@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO)
 scheduler = BackgroundScheduler(timezone="UTC")
-
+'''
 def recalc_all_user_utc_times():
     """Recalculate utc_time for every user based on local_time + timezone.
     This handles DST transitions. Run once daily (00:05 UTC) or on demand.
@@ -37,7 +37,7 @@ def recalc_all_user_utc_times():
         logging.info(f"[Scheduler] Recalc complete — updated {updated} users.")
     finally:
         db.close()
-
+'''
 def send_quotes():
     logging.warning(
         "[Scheduler] send_quotes() in run_scheduler.py is disabled. "
@@ -89,7 +89,7 @@ def send_quotes():
 scheduler.add_job(send_quotes, "interval", minutes=1)
 
 # Recalc utc_time once per day at 00:05 UTC to handle DST shifts
-scheduler.add_job(recalc_all_user_utc_times, "cron", hour=0, minute=5)
+# scheduler.add_job(recalc_all_user_utc_times, "cron", hour=0, minute=5)
 
 scheduler.start()
 
