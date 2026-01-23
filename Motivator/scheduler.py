@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 # Scheduling logic
 # -------------------------------------------------
 def is_user_due(now_utc: datetime, user: User) -> bool:
-    if not user.preferred_time or not user.timezone:
-        logger.debug(f"User {user.id} missing preferred_time or timezone")
+    if not user.local_time or not user.timezone:
+        logger.debug(f"User {user.id} missing local_time or timezone")
         return False
 
     tz = ZoneInfo(user.timezone)
@@ -37,7 +37,7 @@ def is_user_due(now_utc: datetime, user: User) -> bool:
         logger.debug(f"User {user.id} already sent today ({local_today})")
         return False
 
-    send_hour, send_minute = map(int, user.preferred_time.split(":"))
+    send_hour, send_minute = map(int, user.local_time.split(":"))
 
     scheduled_local = local_now.replace(
         hour=send_hour,
