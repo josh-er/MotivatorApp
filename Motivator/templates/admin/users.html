@@ -29,7 +29,6 @@
       <th>Phone</th>
       <th>Timezone</th>
       <th>Local Time</th>
-      <th>UTC Time</th>
       <th>Last Sent</th>
       <th>Opted In</th>
       <th>Cycle</th>
@@ -42,7 +41,7 @@
       <td>{{ u.timezone }}</td>
       <td>{{ u.local_time }}</td>
       <td>{{ u.last_sent or "-" }}</td>
-      <td>{{ u.opted_in }}</td>
+      <td>{{ "Yes" if u.opted_in else "No"}}</td>
       <td>{{ u.cycle }}</td>
     </tr>
     {% endfor %}

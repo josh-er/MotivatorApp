@@ -72,7 +72,6 @@ def add_user():
             flash("User already exists", "warning")
             return redirect(url_for("admin.users"))
 
-        # compute utc_time immediately
         try:
             tz = ZoneInfo(timezone)
             today_local = datetime.now(tz).date()
@@ -276,7 +275,6 @@ def update_settings():
             "user_id": user.id,
             "local_time": user.local_time,
             "timezone": user.timezone,
-            "utc_time": user.utc_time,
             "opted_in": user.opted_in
         })
     finally:
