@@ -16,7 +16,7 @@ def add_user(phone, local_time, timezone):
         send_compliance(db, user)
         print(
             f"Added user {phone} "
-            f"@ {user.local_time} ({user.timezone}, UTC: {user.utc_time})"
+            f"@ {user.local_time} ({user.timezone})"
         )
     except IntegrityError:
         db.rollback()
@@ -31,7 +31,7 @@ def list_users():
         print("No users found.")
     else:
         for u in users:
-            print(f"- {u.phone} @ {u.local_time} (UTC: {u.utc_time})")
+            print(f"- {u.phone} @ {u.local_time})")
     db.close()
 
 def remove_user(phone):

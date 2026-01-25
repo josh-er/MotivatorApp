@@ -14,10 +14,8 @@ class User(Base):
     # New fields:
     # local_time = the time user chose in their local timezone (HH:MM)
     # timezone = IANA timezone string (e.g. "America/Los_Angeles")
-    # utc_time = the normalized UTC HH:MM equivalent stored for scheduling comparison
     local_time = Column(String, nullable=True)   # "HH:MM" as user-submitted local time
     timezone = Column(String, nullable=True)     # IANA timezone like "America/New_York"
-    utc_time = Column(String, nullable=True)     # normalized HH:MM in UTC
 
     # legacy `time` kept for compatibility during migration (optional)
     time = Column(String, nullable=True)  # old field — will be kept for now
