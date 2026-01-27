@@ -8,7 +8,7 @@ from functools import wraps
 from zoneinfo import ZoneInfo
 from Motivator.send_quotes import send_compliance
 from Motivator.event_logger import log_event
-from models import EventLog
+from Motivator.models import EventLog
 from sqlalchemy import desc
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
