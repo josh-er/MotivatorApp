@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% block content %}
+
+<h2>Event Logs</h2>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>Time (UTC)</th>
+      <th>User ID</th>
+      <th>Event</th>
+      <th>Source</th>
+      <th>Metadata</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for event in events %}
+    <tr>
+      <td>
+        {{ event.created_at.strftime("%Y-%m-%d %H:%M:%S") if event.created_at else "-" }}
+      </td>
+      <td>{{ event.user_id or "-" }}</td>
+      <td>{{ event.event_type }}</td>
+      <td>{{ event.source }}</td>
+      <td>
+        {{ event.metadata[:80] }}{% if event.metadata and event.metadata|length > 80 %}…{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
