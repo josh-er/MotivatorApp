@@ -8,6 +8,8 @@ from functools import wraps
 from zoneinfo import ZoneInfo
 from Motivator.send_quotes import send_compliance
 from Motivator.event_logger import log_event
+from models import EventLog
+from sqlalchemy import desc
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 settings_bp = Blueprint("settings", __name__)
@@ -163,6 +165,21 @@ def delete_quote(quote_id):
     finally:
         db.close()
     return redirect(url_for("admin.quotes"))
+
+@admin_bp.route("/events")
+@require_admin_login
+def event_logs():
+    db = SessionLocal()
+    try:
+        events = (
+            db.query(EventLog)
+            .order_by(desc(EventLog.created_at))
+            .limit(200)
+            .all()
+        )
+        return render_template("admin/events.html", events=events)
+    finally:
+        db.close()
 
 @settings_bp.route("/request-settings-link", methods=["POST"])
 def request_settings_link():
