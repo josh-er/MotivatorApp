@@ -10,7 +10,6 @@
       <th>User ID</th>
       <th>Event</th>
       <th>Source</th>
-      <th>Metadata</th>
     </tr>
   </thead>
   <tbody>
@@ -22,9 +21,6 @@
       <td>{{ event.user_id or "-" }}</td>
       <td>{{ event.event_type }}</td>
       <td>{{ event.source }}</td>
-      <td>
-        {{ event.metadata[:80] }}{% if event.metadata and event.metadata|length > 80 %}…{% endif %}
-      </td>
     </tr>
     {% endfor %}
   </tbody>
