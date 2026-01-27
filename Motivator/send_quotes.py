@@ -5,6 +5,7 @@ from Motivator.db import SessionLocal
 from Motivator.models import User, Quote, MessageLog, SentQuote
 from .send_sms import send_sms
 from zoneinfo import ZoneInfo
+from Motivator.event_logger import log_event
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +44,13 @@ def send_compliance(db, user):
         log.status = "failed"
         log.error = str(e)
 
+    log_event(
+        db,
+        user_id=user.id,
+        event_type="compliance_sent",
+        source="system",
+    )
+
     db.commit()
 
 
@@ -76,14 +84,9 @@ def send_quote_to_user(db, user):
         db.commit()
         return
 
-
-    
-    # for testing DST now_utc = datetime(2025, 11, 2, 12, 0, tzinfo=timezone.utc)
     now_utc = datetime.now(timezone.utc)
     local_now = now_utc.astimezone(user_tz)
     local_today = local_now.date()
-    # line below for testing
-    # logger.info(f"LOCAL_NOW={local_now}, LOCAL_TODAY={local_today}")
 
     # --- create log immediately ---
     log = MessageLog(
@@ -99,27 +102,49 @@ def send_quote_to_user(db, user):
     if not user.local_time or not user.timezone:
         log.status = "skipped"
         log.error = "invalid schedule (missing preferred_time or timezone)"
+        log_event(
+            db,
+            user_id=user.id,
+            event_type="quote_skipped",
+            source="scheduler",
+        )
         db.commit()
         return
 
     if not user.opted_in:
         log.status = "skipped"
         log.error = "user opted out"
+        log_event(
+            db,
+            user_id=user.id,
+            event_type="quote_skipped",
+            source="scheduler",
+        )
         db.commit()
         return
 
     if not user.received_compliance:
         log.status = "skipped"
         log.error = "compliance not sent"
+        log_event(
+            db,
+            user_id=user.id,
+            event_type="quote_skipped",
+            source="scheduler",
+        )
         db.commit()
         return
 
     if user.last_sent == local_today:
         log.status = "skipped"
         log.error = "already sent today (local)"
+        log_event(
+            db,
+            user_id=user.id,
+            event_type="quote_skipped",
+            source="scheduler",
+        )
         db.commit()
-        # logger.info line is for testing
-        # logger.info(f"Skipped {user.phone}: already sent today (local)")
         return
 
     # --- quote selection ---
@@ -156,6 +181,13 @@ def send_quote_to_user(db, user):
         )
 
         log.status = "success"
+
+        log_event(
+            db,
+            user_id=user.id,
+            event_type="quote_sent",
+            source="scheduler",
+        )
 
     except Exception as e:
         logger.exception(f"Failed to send to {user.phone}")

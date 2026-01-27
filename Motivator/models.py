@@ -51,6 +51,16 @@ class MessageLog(Base):
     error = Column(String, nullable=True)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class EventLog(Base):
+    __tablename__ = "event_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    event_type = Column(String, nullable=False)
+    source = Column(String, nullable=False)
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class SentQuote(Base):
     __tablename__ = "sent_quotes"

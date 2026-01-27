@@ -7,6 +7,7 @@ from datetime import datetime, date, timezone
 from functools import wraps
 from zoneinfo import ZoneInfo
 from Motivator.send_quotes import send_compliance
+from Motivator.event_logger import log_event
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 settings_bp = Blueprint("settings", __name__)
@@ -178,6 +179,14 @@ def request_settings_link():
 
         token = generate_settings_token(user.id)
 
+        log_event(
+            db,
+            user_id=user.id,
+            event_type="settings_link_requested",
+            source="settings_link",
+        )
+        db.commit()
+
         link = f"http://localhost:5000/settings?token={token}"
 
         return jsonify({"settings_link": link}), 200
@@ -256,11 +265,6 @@ def update_settings():
         if local_time:
             tz = ZoneInfo(timezone_str)
             today_local = datetime.now(tz).date()
-            local_dt = datetime.combine(
-                today_local,
-                datetime.strptime(local_time, "%H:%M").time(),
-                tzinfo=tz
-            )
             user.local_time = local_time
             user.timezone = timezone_str
 
@@ -268,6 +272,14 @@ def update_settings():
             user.opted_in = bool(opted_in)
 
         token.used = True
+
+        log_event(
+            db,
+            user_id=user.id,
+            event_type="settings_updated",
+            source="settings_link",
+        )
+
         db.commit()
 
         return jsonify({
