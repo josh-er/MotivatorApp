@@ -275,6 +275,8 @@ def update_settings():
         if not user:
             abort(404, "User not found")
 
+        previous_opted_in = user.opted_in
+
         local_time = data.get("local_time")
         timezone_str = data.get("timezone") or user.timezone
         opted_in = data.get("opted_in")
@@ -286,7 +288,11 @@ def update_settings():
             user.timezone = timezone_str
 
         if opted_in is not None:
-            user.opted_in = bool(opted_in)
+            opted_in = bool(opted_in)
+            user.opted_in = opted_in
+
+            if opted_in and not previous_opted_in:
+                send_compliance(db, user)
 
         token.used = True
 
