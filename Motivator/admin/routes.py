@@ -292,6 +292,7 @@ def update_settings():
             user.opted_in = opted_in
 
             if opted_in and not previous_opted_in:
+                user.received_compliance = False
                 send_compliance(db, user)
 
         token.used = True
