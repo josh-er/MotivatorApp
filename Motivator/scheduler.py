@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 from Motivator.db import SessionLocal
 from Motivator.models import User
 from Motivator.send_quotes import send_users
+from Motivator.db import engine
+
 
 CHECK_INTERVAL = 60  # seconds — check every minute
 
@@ -20,7 +22,7 @@ logging.basicConfig(
     handlers=[log_handler, logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
-
+logger.warning(f"[SCHEDULER] ENGINE URL: {engine.url}")
 # -------------------------------------------------
 # Scheduling logic
 # -------------------------------------------------
