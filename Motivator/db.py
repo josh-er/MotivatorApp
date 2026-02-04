@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
+
 env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 load_dotenv(dotenv_path=env_path)
 
@@ -32,6 +33,7 @@ elif DATABASE_URL.endswith("motivator.db") and not os.path.exists("motivator.db"
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+print("DB URL:", engine.url)
 
 # 4. Import models after Base (SQLAlchemy discovery)
 from Motivator import models  # noqa: E402
