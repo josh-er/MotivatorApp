@@ -287,14 +287,6 @@ def update_settings():
             user.local_time = local_time
             user.timezone = timezone_str
 
-        if opted_in is not None:
-            opted_in = bool(opted_in)
-            user.opted_in = opted_in
-
-            if opted_in and not previous_opted_in:
-                user.received_compliance = False
-                send_compliance(db, user)
-
         token.used = True
 
         log_event(

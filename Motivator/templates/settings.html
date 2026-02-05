@@ -31,11 +31,6 @@
       </select>
     </label>
 
-    <label>
-      <input type="checkbox" id="opted_in">
-      Receive motivational quotes
-    </label>
-
     <button type="submit">Save</button>
   </form>
 
@@ -68,7 +63,6 @@
         const data = await res.json();
         document.getElementById('local_time').value = data.local_time;
         document.getElementById('timezone').value = data.timezone;
-        document.getElementById('opted_in').checked = data.opted_in;
 
       } catch {
         disableForm('Error loading settings.');
@@ -86,7 +80,6 @@
             token,
             local_time: document.getElementById('local_time').value,
             timezone: document.getElementById('timezone').value,
-            opted_in: document.getElementById('opted_in').checked
           })
         });
 
