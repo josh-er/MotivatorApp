@@ -69,85 +69,29 @@ def get_unseen_quotes(db, user):
 
 
 def send_quote_to_user(db, user):
-    # --- compute LOCAL today ---
+    now_utc = datetime.now(timezone.utc)
+
+    # ---- guards: NO LOGGING ----
+    if not user.phone:
+        return "no_phone"
+
+    if not user.local_time or not user.timezone:
+        return "invalid_schedule"
+
+    if not user.opted_in:
+        return "not_opted_in"
+
     try:
         user_tz = ZoneInfo(user.timezone)
     except Exception:
-        log = MessageLog(
-            phone=user.phone,
-            quote="",
-            status="skipped",
-            error="invalid timezone",
-            timestamp=datetime.now(timezone.utc),
-        )
-        db.add(log)
-        db.commit()
-        return
+        return "invalid_timezone"
 
-    now_utc = datetime.now(timezone.utc)
-    local_now = now_utc.astimezone(user_tz)
-    local_today = local_now.date()
-
-    # --- create log immediately ---
-    log = MessageLog(
-        phone=user.phone,
-        quote="",
-        status="pending",
-        timestamp=now_utc,
-    )
-    db.add(log)
-    db.commit()
-
-    # --- guards ---
-    if not user.local_time or not user.timezone:
-        log.status = "skipped"
-        log.error = "invalid schedule (missing preferred_time or timezone)"
-        log_event(
-            db,
-            user_id=user.id,
-            event_type="quote_skipped",
-            source="scheduler",
-        )
-        db.commit()
-        return
-
-    if not user.opted_in:
-        log.status = "skipped"
-        log.error = "user opted out"
-        log_event(
-            db,
-            user_id=user.id,
-            event_type="quote_skipped",
-            source="scheduler",
-        )
-        db.commit()
-        return
-
-    if not user.received_compliance:
-        log.status = "skipped"
-        log.error = "compliance not sent"
-        log_event(
-            db,
-            user_id=user.id,
-            event_type="quote_skipped",
-            source="scheduler",
-        )
-        db.commit()
-        return
+    local_today = now_utc.astimezone(user_tz).date()
 
     if user.last_sent == local_today:
-        log.status = "skipped"
-        log.error = "already sent today (local)"
-        log_event(
-            db,
-            user_id=user.id,
-            event_type="quote_skipped",
-            source="scheduler",
-        )
-        db.commit()
-        return
+        return "already_sent"
 
-    # --- quote selection ---
+    # ---- quote selection ----
     if not user.cycle:
         user.cycle = 1
 
@@ -156,16 +100,22 @@ def send_quote_to_user(db, user):
         user.cycle += 1
         unseen = get_unseen_quotes(db, user)
         if not unseen:
-            log.status = "failed"
-            log.error = "no quotes available"
-            db.commit()
-            return
+            return "no_quotes"
 
     quote = random.choice(unseen)
-    log.quote = quote.text
+
+    # ---- log ONLY now ----
+    log = MessageLog(
+        phone=user.phone,
+        quote=quote.text,
+        status="pending",
+        timestamp=now_utc,
+    )
+    db.add(log)
+    db.commit()
 
     try:
-        # mark sent BEFORE SMS to guarantee idempotency
+        # idempotency lock
         user.last_sent = local_today
         db.commit()
 
@@ -175,7 +125,7 @@ def send_quote_to_user(db, user):
             SentQuote(
                 user_id=user.id,
                 quote_id=quote.id,
-                sent_date=now_utc,  # always UTC timestamp
+                sent_date=now_utc,
                 cycle=user.cycle,
             )
         )
@@ -189,12 +139,14 @@ def send_quote_to_user(db, user):
             source="scheduler",
         )
 
+        db.commit()
+        return "sent"
+
     except Exception as e:
-        logger.exception(f"Failed to send to {user.phone}")
         log.status = "failed"
         log.error = str(e)
-
-    db.commit()
+        db.commit()
+        return "failed"
 
 
 def send_now(phone: str):
@@ -219,6 +171,5 @@ def send_users(db, users):
     Scheduler is responsible for time logic.
     """
     logger.info(f"Sending quotes to {len(users)} users")
-
     for user in users:
         send_quote_to_user(db, user)

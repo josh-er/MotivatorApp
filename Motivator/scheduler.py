@@ -22,7 +22,7 @@ logging.basicConfig(
     handlers=[log_handler, logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
-logger.warning(f"[SCHEDULER] ENGINE URL: {engine.url}")
+
 # -------------------------------------------------
 # Scheduling logic
 # -------------------------------------------------
@@ -63,7 +63,10 @@ def run_scheduler():
 
             users = (
                 db.query(User)
-                .filter(User.opted_in.is_(True))
+                .filter(
+                    User.opted_in.is_(True),
+                    User.received_compliance.is_(True),
+                )
                 .all()
             )
 
