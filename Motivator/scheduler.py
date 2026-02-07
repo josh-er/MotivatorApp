@@ -8,7 +8,8 @@ from Motivator.db import SessionLocal
 from Motivator.models import User
 from Motivator.send_quotes import send_users
 from Motivator.db import engine
-
+from dotenv import load_dotenv
+load_dotenv()
 
 CHECK_INTERVAL = 60  # seconds — check every minute
 

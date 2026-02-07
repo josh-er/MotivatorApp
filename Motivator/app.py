@@ -10,6 +10,9 @@ from Motivator.user_service import create_user
 from Motivator.models import User, Quote
 from Motivator.admin.routes import admin_bp, settings_bp
 from Motivator.send_quotes import send_quote_to_user
+from dotenv import load_dotenv
+
+load_dotenv()
 
 ADMIN_KEY = os.getenv("ADMIN_KEY")
 ENV = os.getenv("ENV", "development")
