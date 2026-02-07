@@ -68,11 +68,27 @@ def send_sms(to_number: str, message: str, allow_override_daily_cap=False, force
     client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
     try:
-        return client.messages.create(
+        result = client.messages.create(
             body=message,
             from_=FROM_NUMBER,
             to=to_number,
         )
+
+        db = SessionLocal()
+        try:
+            log = MessageLog(
+                phone=to_number,
+                quote=message,
+                status="success",
+                timestamp=datetime.now(timezone.utc),
+            )
+            db.add(log)
+            db.commit()
+        finally:
+            db.close()
+
+        return None
+
 
     except Exception as e:
         db = SessionLocal()
