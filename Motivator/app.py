@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from twilio.twiml.messaging_response import MessagingResponse
 from Motivator.db import SessionLocal, engine
 from Motivator.user_service import create_user
-from Motivator.models import User, Quote
+from Motivator.models import User
 from Motivator.admin.routes import admin_bp, settings_bp
 from Motivator.send_quotes import send_quote_to_user
 from dotenv import load_dotenv
@@ -90,11 +90,15 @@ def sms_inbound():
         return str(resp)
 
     if body == "STOP":
+        from Motivator.send_sms import send_sms
         if user.opted_in:
             user.opted_in = False
             db.commit()
             logging.info("SMS OPT UPDATE phone=%s opted_in=%s", user.phone, user.opted_in,)
-            resp.message("You've been unsubscribed. Reply START to rejoin Motivator.")
+            send_sms(
+                user.phone,
+                "You've been unsubscribed. Reply START to rejoin Motivator."
+            )
         return str(resp)
 
     if body == "START":
@@ -103,6 +107,9 @@ def sms_inbound():
             user.received_compliance = False  # reset compliance so we can send again
             db.commit()
             logging.info("SMS OPT UPDATE phone=%s opted_in=%s", user.phone, user.opted_in)
+            from Motivator.send_quotes import send_compliance
+            # send_compliance will now respect the same 2/day limit inside send_sms()
+            send_compliance(db, user)
         return str(resp)
 
 

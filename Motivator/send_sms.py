@@ -12,17 +12,17 @@ if not FROM_NUMBER:
 
 SMS_DISABLED = os.getenv("SMS_DISABLED") == "1"
 SMS_DRY_RUN = os.getenv("SMS_DRY_RUN") == "1"
-MAX_DAILY_SMS = int(os.getenv("MAX_DAILY_SMS", "3"))
 
 logger = logging.getLogger(__name__)
 
+# send_sms.py
 
 def _start_of_utc_day():
     now = datetime.now(timezone.utc)
     return datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
 
-
-def _daily_send_count(db, phone: str) -> int:
+def _daily_sms_count_for_user(db, phone: str) -> int:
+    """Count total successful messages sent today to this phone."""
     return (
         db.query(MessageLog)
         .filter(
@@ -34,40 +34,34 @@ def _daily_send_count(db, phone: str) -> int:
     )
 
 
-def send_sms(to_number: str, message: str):
+def send_sms(to_number: str, message: str, allow_override_daily_cap=False, force_send=False):
     """
     Central SMS send with safety controls.
     """
 
-    # --- Kill switch ---
     if SMS_DISABLED:
         logger.warning("SMS DISABLED — skipping send to %s", to_number)
         return None
 
     db = SessionLocal()
     try:
-        # --- Daily cap ---
-        sent_today = _daily_send_count(db, to_number)
-        if sent_today >= MAX_DAILY_SMS:
+        sent_today = _daily_sms_count_for_user(db, to_number)
+        if not allow_override_daily_cap and not force_send and sent_today >= 5:
             logger.warning(
-                "Daily SMS cap hit for %s (%s/%s)",
+                "Daily SMS cap hit for %s (%s/5)",
                 to_number,
                 sent_today,
-                MAX_DAILY_SMS,
             )
             return None
 
-        # --- Dry run ---
         if SMS_DRY_RUN:
             logger.info("DRY RUN SMS to %s: %s", to_number, message)
             return None
-
     finally:
         db.close()
 
     ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
     AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-
     if not ACCOUNT_SID or not AUTH_TOKEN:
         raise ValueError("Missing Twilio credentials")
 
@@ -81,7 +75,6 @@ def send_sms(to_number: str, message: str):
         )
 
     except Exception as e:
-        # Log failure
         db = SessionLocal()
         try:
             log = MessageLog(
