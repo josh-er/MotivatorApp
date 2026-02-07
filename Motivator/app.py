@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask, request, jsonify, session, redirect, url_for, flash
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -73,7 +74,7 @@ def submit():
 
 @app.route("/sms/inbound", methods=["POST"])
 def sms_inbound():
-    print("SMS INBOUND HIT")
+    logging.info("SMS INBOUND HIT")
     db = SessionLocal()
     from_number = request.form.get("From")
     body = request.form.get("Body", "").strip().upper()
@@ -89,7 +90,7 @@ def sms_inbound():
         if user.opted_in:
             user.opted_in = False
             db.commit()
-            print("SMS OPT UPDATE", {"phone": user.phone, "opted_in": user.opted_in})
+            logging.info("SMS OPT UPDATE phone=%s opted_in=%s", user.phone, user.opted_in,)
             resp.message("You've been unsubscribed. Reply START to rejoin Motivator.")
         else:
             resp.message("You're already unsubscribed.")
@@ -100,9 +101,6 @@ def sms_inbound():
             user.opted_in = True
             user.received_compliance = False  # reset compliance so we can send again
             db.commit()
-
-            from Motivator.send_quotes import send_compliance
-            send_compliance(db, user)
         else:
             resp.message("You're already opted in.")
         return str(resp)
