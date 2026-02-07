@@ -92,8 +92,6 @@ def sms_inbound():
             db.commit()
             logging.info("SMS OPT UPDATE phone=%s opted_in=%s", user.phone, user.opted_in,)
             resp.message("You've been unsubscribed. Reply START to rejoin Motivator.")
-        else:
-            resp.message("You're already unsubscribed.")
         return str(resp)
 
     if body == "START":
@@ -101,8 +99,7 @@ def sms_inbound():
             user.opted_in = True
             user.received_compliance = False  # reset compliance so we can send again
             db.commit()
-        else:
-            resp.message("You're already opted in.")
+            logging.info("SMS OPT UPDATE phone=%s opted_in=%s", user.phone, user.opted_in)
         return str(resp)
 
 
