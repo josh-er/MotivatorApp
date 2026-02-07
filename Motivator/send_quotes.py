@@ -69,6 +69,7 @@ def get_unseen_quotes(db, user):
 
 
 def send_quote_to_user(db, user):
+    # NOTE: compliance is ONLY sent from sms_inbound on START
     now_utc = datetime.now(timezone.utc)
 
     # ---- guards: NO LOGGING ----

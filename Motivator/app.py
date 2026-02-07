@@ -100,11 +100,9 @@ def sms_inbound():
             user.opted_in = True
             user.received_compliance = False  # reset compliance so we can send again
             db.commit()
-            print("SMS OPT UPDATE", {"phone": user.phone, "opted_in": user.opted_in})
-            # send compliance immediately
+
             from Motivator.send_quotes import send_compliance
             send_compliance(db, user)
-            resp.message("You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel.")
         else:
             resp.message("You're already opted in.")
         return str(resp)
