@@ -93,6 +93,8 @@ def sms_inbound():
         if user.opted_in:
             user.opted_in = False
             db.commit()
+            from Motivator.event_logger import log_event
+            log_event(db, user.id, "user_opt_out", "sms_inbound")
         return str(resp)
 
     if body == "START":
@@ -103,6 +105,8 @@ def sms_inbound():
 
             from Motivator.send_quotes import send_compliance
             send_compliance(db, user)
+            from Motivator.event_logger import log_event
+            log_event(db, user.id, "user_opt_in", "sms_inbound")
         return str(resp)
 
 
