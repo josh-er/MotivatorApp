@@ -15,8 +15,6 @@ SMS_DRY_RUN = os.getenv("SMS_DRY_RUN") == "1"
 
 logger = logging.getLogger(__name__)
 
-# send_sms.py
-
 def _start_of_utc_day():
     now = datetime.now(timezone.utc)
     return datetime(now.year, now.month, now.day, tzinfo=timezone.utc)

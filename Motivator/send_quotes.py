@@ -2,7 +2,7 @@ import random
 import logging
 from datetime import datetime, timezone
 from Motivator.db import SessionLocal
-from Motivator.models import User, Quote, MessageLog, SentQuote
+from Motivator.models import User, Quote, SentQuote
 from .send_sms import send_sms
 from zoneinfo import ZoneInfo
 from Motivator.event_logger import log_event
@@ -16,33 +16,21 @@ def utc_today():
 
 def send_compliance(db, user):
     user = db.get(User, user.id)
-    
+
     if not user.phone:
         return
-
     if user.received_compliance or not user.opted_in:
         return
 
-    text = (
-        "You're now opted in to receive once daily motivational SMS messages from Motivator. Msg & data rates may apply. Visit the Motivator app to customize your preferences. Reply HELP for help. Reply STOP to cancel."
+    text = "..."
+
+    send_sms(
+        user.phone,
+        text,
+        allow_override_daily_cap=False,
     )
 
-    log = MessageLog(
-        phone=user.phone,
-        quote="[COMPLIANCE]",
-        status="pending",
-        timestamp=datetime.now(timezone.utc)
-    )
-    db.add(log)
-    db.commit()
-
-    try:
-        send_sms(user.phone, text)
-        user.received_compliance = True
-        log.status = "success"
-    except Exception as e:
-        log.status = "failed"
-        log.error = str(e)
+    user.received_compliance = True
 
     log_event(
         db,
@@ -69,18 +57,13 @@ def get_unseen_quotes(db, user):
 
 
 def send_quote_to_user(db, user):
-    # NOTE: compliance is ONLY sent from sms_inbound on START
     now_utc = datetime.now(timezone.utc)
 
-    # ---- guards: NO LOGGING ----
-    if not user.phone:
-        return "no_phone"
+    if not user.phone or not user.opted_in:
+        return "not_eligible"
 
     if not user.local_time or not user.timezone:
         return "invalid_schedule"
-
-    if not user.opted_in:
-        return "not_opted_in"
 
     try:
         user_tz = ZoneInfo(user.timezone)
@@ -92,60 +75,36 @@ def send_quote_to_user(db, user):
     if user.last_sent == local_today:
         return "already_sent"
 
-    # ---- quote selection ----
-    if not user.cycle:
-        user.cycle = 1
-
     unseen = get_unseen_quotes(db, user)
     if not unseen:
-        user.cycle += 1
+        user.cycle = (user.cycle or 1) + 1
         unseen = get_unseen_quotes(db, user)
         if not unseen:
             return "no_quotes"
 
     quote = random.choice(unseen)
+    message_text = quote.text
 
-    # ---- log ONLY now ----
-    log = MessageLog(
-        phone=user.phone,
-        quote=quote.text,
-        status="pending",
-        timestamp=now_utc,
-    )
-    db.add(log)
     db.commit()
 
     try:
-        # idempotency lock
         user.last_sent = local_today
         db.commit()
 
-        send_sms(user.phone, quote.text)
+        send_sms(user.phone, message_text)
 
-        db.add(
-            SentQuote(
-                user_id=user.id,
-                quote_id=quote.id,
-                sent_date=now_utc,
-                cycle=user.cycle,
-            )
-        )
-
-        log.status = "success"
-
-        log_event(
-            db,
+        db.add(SentQuote(
             user_id=user.id,
-            event_type="quote_sent",
-            source="scheduler",
-        )
+            quote_id=quote.id,
+            sent_date=now_utc,
+            cycle=user.cycle or 1,
+        ))
 
+        log_event(db, user.id, "quote_sent", "scheduler")
         db.commit()
         return "sent"
 
     except Exception as e:
-        log.status = "failed"
-        log.error = str(e)
         db.commit()
         return "failed"
 

@@ -90,25 +90,18 @@ def sms_inbound():
         return str(resp)
 
     if body == "STOP":
-        from Motivator.send_sms import send_sms
         if user.opted_in:
             user.opted_in = False
             db.commit()
-            logging.info("SMS OPT UPDATE phone=%s opted_in=%s", user.phone, user.opted_in,)
-            send_sms(
-                user.phone,
-                "You've been unsubscribed. Reply START to rejoin Motivator."
-            )
         return str(resp)
 
     if body == "START":
         if not user.opted_in:
             user.opted_in = True
-            user.received_compliance = False  # reset compliance so we can send again
+            user.received_compliance = False
             db.commit()
-            logging.info("SMS OPT UPDATE phone=%s opted_in=%s", user.phone, user.opted_in)
+
             from Motivator.send_quotes import send_compliance
-            # send_compliance will now respect the same 2/day limit inside send_sms()
             send_compliance(db, user)
         return str(resp)
 
