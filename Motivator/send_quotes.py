@@ -22,10 +22,7 @@ def send_compliance(db, user):
     if user.received_compliance or not user.opted_in:
         return
 
-    send_sms(
-        user.phone,
-        allow_override_daily_cap=False,
-    )
+    send_sms(user.phone)
 
     user.received_compliance = True
 

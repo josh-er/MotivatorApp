@@ -77,7 +77,6 @@ def submit():
 
 @app.route("/sms/inbound", methods=["POST"])
 def sms_inbound():
-    logging.info("SMS INBOUND HIT")
     db = SessionLocal()
     from_number = request.form.get("From")
     body = request.form.get("Body", "").strip().upper()
@@ -93,8 +92,6 @@ def sms_inbound():
         if user.opted_in:
             user.opted_in = False
             db.commit()
-            from Motivator.event_logger import log_event
-            log_event(db, user.id, "user_opt_out", "sms_inbound")
         return str(resp)
 
     if body == "START":
