@@ -97,7 +97,6 @@ def sms_inbound():
     if body == "START":
         if not user.opted_in:
             user.opted_in = True
-            user.received_compliance = False
             db.commit()
 
             from Motivator.send_quotes import send_compliance

@@ -82,7 +82,6 @@ def run_scheduler():
                 db.query(User)
                 .filter(
                     User.opted_in.is_(True),
-                    User.received_compliance.is_(True),
                 )
                 .all()
             )
