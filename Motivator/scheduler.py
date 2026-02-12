@@ -49,6 +49,13 @@ def is_user_due(now_utc: datetime, user: User) -> bool:
         microsecond=0,
     )
 
+    logger.info(
+        f"[DUE CHECK] user={user.id} "
+        f"local_now={local_now} "
+        f"scheduled_local={scheduled_local} "
+        f"last_sent={user.last_sent}"
+    )
+
     # If worker was down, send late but only once per local day
     return local_now >= scheduled_local
 
