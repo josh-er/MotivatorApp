@@ -69,6 +69,15 @@ def run_scheduler():
             db = SessionLocal()
             now_utc = datetime.now(timezone.utc)
 
+            all_users = db.query(User).all()
+
+            for u in all_users:
+                logger.info(
+                    f"[USER STATE] id={u.id} phone={u.phone} "
+                    f"opted_in={u.opted_in} "
+                    f"received_compliance={u.received_compliance}"
+                )
+
             users = (
                 db.query(User)
                 .filter(
