@@ -19,6 +19,7 @@ load_dotenv()
 
 ADMIN_KEY = os.getenv("ADMIN_KEY")
 ENV = os.getenv("ENV", "development")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret")
@@ -99,7 +100,7 @@ def sms_inbound():
         db.commit()
 
         token = generate_settings_token(user.id)
-        settings_link = f"https://motivatorapp.onrender.com/settings?token={token}"
+        settings_link = f"{BASE_URL}/settings?token={token}"
 
         send_compliance(db, user)
 
