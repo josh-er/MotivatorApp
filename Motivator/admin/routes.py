@@ -204,7 +204,7 @@ def request_settings_link():
         )
         db.commit()
 
-        link = f"http://localhost:5000/settings?token={token}"
+        link = f"https://motivatorapp.onrender.com/settings?token={token}"
 
         return jsonify({"settings_link": link}), 200
     finally:

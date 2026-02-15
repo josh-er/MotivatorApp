@@ -9,8 +9,11 @@ from Motivator.db import SessionLocal, engine
 from Motivator.user_service import create_user
 from Motivator.models import User
 from Motivator.admin.routes import admin_bp, settings_bp
-from Motivator.send_quotes import send_quote_to_user
+from Motivator.send_quotes import send_quote_to_user, send_compliance
 from dotenv import load_dotenv
+from Motivator.utils.tokens import generate_settings_token
+from Motivator.send_sms import send_sms
+from Motivator.event_logger import log_event
 
 load_dotenv()
 
@@ -45,8 +48,8 @@ def submit():
     time_str = data.get("time")
     tz_str = data.get("timezone") or "America/New_York"
 
-    if not phone or not time_str:
-        return jsonify({"error": "Phone and time are required"}), 400
+    if not phone:
+        return jsonify({"error": "Phone is required"}), 400
 
     try:
         ZoneInfo(tz_str)
@@ -85,7 +88,28 @@ def sms_inbound():
     resp = MessagingResponse()
 
     if not user:
-        resp.message("You're not signed up for Motivator. Download the app to join.")
+        # Create new user with defaults
+        user = create_user(
+            phone=from_number,
+            local_time=None,      # defaults to 09:00
+            timezone=None         # defaults to America/New_York
+        )
+        user.opted_in = True
+        db.add(user)
+        db.commit()
+
+        token = generate_settings_token(user.id)
+        settings_link = f"https://motivatorapp.onrender.com/settings?token={token}"
+
+        send_compliance(db, user)
+
+        send_sms(
+            user.phone,
+            f"Set your delivery time here: {settings_link}"
+        )
+
+        log_event(db, user.id, "user_signed_up_via_sms", "sms_inbound")
+
         return str(resp)
 
     if body == "STOP":
@@ -99,9 +123,16 @@ def sms_inbound():
             user.opted_in = True
             db.commit()
 
-            from Motivator.send_quotes import send_compliance
+            token = generate_settings_token(user.id)
+            settings_link = f"https://motivatorapp.onrender.com/settings?token={token}"
+
             send_compliance(db, user)
-            from Motivator.event_logger import log_event
+
+            send_sms(
+                user.phone,
+                f"Set your delivery time here: {settings_link}"
+            )
+
             log_event(db, user.id, "user_opt_in", "sms_inbound")
         return str(resp)
 

@@ -2,12 +2,18 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from Motivator.models import User
 
-def create_user(phone: str, local_time: str, timezone: str):
+def create_user(phone: str, local_time: str | None, timezone: str | None):
     """
     Canonical user creation.
     local_time: 'HH:MM'
     timezone: IANA tz string (e.g. America/New_York)
     """
+    if not local_time:
+        local_time = "09:00"
+
+    if not timezone:
+        timezone = "America/New_York"
+
     user_time_naive = datetime.strptime(local_time, "%H:%M")
 
     user_tz = ZoneInfo(timezone)
