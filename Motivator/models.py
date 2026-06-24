@@ -26,6 +26,7 @@ class User(Base):
 
     opted_in = Column(Boolean, nullable=False, default=True)
     received_compliance = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     sent_quotes = relationship("SentQuote", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
 

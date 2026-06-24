@@ -46,11 +46,15 @@ def health():
 def submit():
     data = request.json or {}
     phone = data.get("phone")
-    time_str = data.get("time")
+    local_time = data.get("local_time")
     tz_str = data.get("timezone") or "America/New_York"
+    consent = data.get("consent")
 
     if not phone:
         return jsonify({"error": "Phone is required"}), 400
+
+    if not consent:
+        return jsonify({"error": "SMS consent is required"}), 400
 
     try:
         ZoneInfo(tz_str)
@@ -61,11 +65,16 @@ def submit():
     try:
         user = create_user(
             phone=phone,
-            local_time=time_str,
+            local_time=local_time,
             timezone=tz_str
         )
         db.add(user)
         db.commit()
+
+        send_compliance(db, user)
+        log_event(db, user.id, "user_signed_up_via_app", "submit")
+        db.commit()
+
         return jsonify({
             "status": "success",
             "timezone": user.timezone
@@ -89,28 +98,8 @@ def sms_inbound():
     resp = MessagingResponse()
 
     if not user:
-        # Create new user with defaults
-        user = create_user(
-            phone=from_number,
-            local_time=None,      # defaults to 09:00
-            timezone=None         # defaults to America/New_York
-        )
-        user.opted_in = True
-        db.add(user)
-        db.commit()
-
-        token = generate_settings_token(user.id)
-        settings_link = f"{BASE_URL}/settings?token={token}"
-
-        send_compliance(db, user)
-
-        send_sms(
-            user.phone,
-            f"Set your delivery time here: {settings_link}"
-        )
-
-        log_event(db, user.id, "user_signed_up_via_sms", "sms_inbound")
-
+        if body == "START":
+            resp.message("To sign up for Motivator, please download the app.")
         return str(resp)
 
     if body == "STOP":
@@ -125,13 +114,11 @@ def sms_inbound():
             db.commit()
 
             token = generate_settings_token(user.id)
-            settings_link = f"https://motivatorapp.onrender.com/settings?token={token}"
-
-            send_compliance(db, user)
+            settings_link = f"{BASE_URL}/settings?token={token}"
 
             send_sms(
                 user.phone,
-                f"Set your delivery time here: {settings_link}"
+                f"You're re-subscribed to Motivator! Update your delivery time: {settings_link}"
             )
 
             log_event(db, user.id, "user_opt_in", "sms_inbound")

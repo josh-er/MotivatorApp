@@ -22,7 +22,11 @@ def send_compliance(db, user):
     if user.received_compliance or not user.opted_in:
         return
 
-    send_sms(user.phone)
+    COMPLIANCE_MESSAGE = (
+        "Motivator: You're subscribed to 1 motivational msg/day. "
+        "Msg & data rates may apply. Reply STOP to cancel, HELP for help."
+    )
+    send_sms(user.phone, COMPLIANCE_MESSAGE)
 
     user.received_compliance = True
 
