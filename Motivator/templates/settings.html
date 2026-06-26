@@ -9,25 +9,28 @@
     input, select { margin-top: 5px; }
     button { margin-top: 15px; }
     #message { margin-top: 20px; font-weight: bold; }
+    .error { color: #c0392b; }
     .disabled { opacity: 0.6; pointer-events: none; }
   </style>
 </head>
 <body>
   <h1>Update Your Settings</h1>
 
+  {% if error %}
+    <p class="error">{{ error }}</p>
+  {% else %}
   <form id="settings-form">
     <label>
       Local Time:
-      <input type="time" id="local_time" required>
+      <input type="time" id="local_time" value="{{ prefill_time or '' }}" required>
     </label>
 
     <label>
       Timezone:
       <select id="timezone">
-        <option value="America/New_York">America/New_York</option>
-        <option value="America/Chicago">America/Chicago</option>
-        <option value="America/Denver">America/Denver</option>
-        <option value="America/Los_Angeles">America/Los_Angeles</option>
+        {% for tz_value, tz_label in timezones %}
+        <option value="{{ tz_value }}" {% if prefill_timezone == tz_value %}selected{% endif %}>{{ tz_label }}</option>
+        {% endfor %}
       </select>
     </label>
 
@@ -39,34 +42,11 @@
   <script>
     const form = document.getElementById('settings-form');
     const messageEl = document.getElementById('message');
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+    const token = {{ token | tojson }};
 
     function disableForm(text) {
       form.classList.add('disabled');
       messageEl.innerText = text;
-    }
-
-    async function loadSettings() {
-      try {
-        const res = await fetch(`/api/settings?token=${token}`);
-
-        if (res.status === 403) {
-          disableForm('This settings link has already been used.');
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error();
-        }
-
-        const data = await res.json();
-        document.getElementById('local_time').value = data.local_time;
-        document.getElementById('timezone').value = data.timezone;
-
-      } catch {
-        disableForm('Error loading settings.');
-      }
     }
 
     form.addEventListener('submit', async (e) => {
@@ -98,8 +78,7 @@
         messageEl.innerText = 'Error updating settings.';
       }
     });
-
-    loadSettings();
   </script>
+  {% endif %}
 </body>
 </html>

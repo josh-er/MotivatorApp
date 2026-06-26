@@ -12,6 +12,7 @@ from Motivator.admin.routes import admin_bp, settings_bp
 from Motivator.send_quotes import send_quote_to_user, send_compliance
 from dotenv import load_dotenv
 from Motivator.utils.tokens import generate_settings_token
+from Motivator.utils.phone import normalize_phone
 from Motivator.send_sms import send_sms
 from Motivator.event_logger import log_event
 
@@ -55,6 +56,11 @@ def submit():
 
     if not consent:
         return jsonify({"error": "SMS consent is required"}), 400
+
+    try:
+        phone = normalize_phone(phone)
+    except ValueError:
+        return jsonify({"error": "Invalid phone number"}), 400
 
     try:
         ZoneInfo(tz_str)

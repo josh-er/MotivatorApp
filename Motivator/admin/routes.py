@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, abort
-from Motivator.utils.tokens import generate_settings_token
+from Motivator.utils.tokens import generate_settings_token, hash_token
+from Motivator.utils.phone import normalize_phone
 from .services import get_all_users, get_message_logs
 from Motivator.db import SessionLocal
 from Motivator.models import User, Quote, SettingsToken
@@ -14,6 +15,21 @@ from sqlalchemy import desc
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 settings_bp = Blueprint("settings", __name__)
 
+US_TIMEZONES = [
+    ("America/New_York",             "Eastern (New York)"),
+    ("America/Chicago",              "Central (Chicago)"),
+    ("America/Denver",               "Mountain (Denver)"),
+    ("America/Phoenix",              "Mountain – no DST (Phoenix)"),
+    ("America/Los_Angeles",          "Pacific (Los Angeles)"),
+    ("America/Anchorage",            "Alaska (Anchorage)"),
+    ("America/Nome",                 "Alaska (Nome)"),
+    ("America/Juneau",               "Alaska (Juneau)"),
+    ("Pacific/Honolulu",             "Hawaii – no DST (Honolulu)"),
+    ("America/Adak",                 "Hawaii-Aleutian (Adak)"),
+    ("America/Indiana/Indianapolis", "Eastern – no DST (Indianapolis)"),
+    ("America/Boise",                "Mountain (Boise)"),
+]
+
 def require_admin_login(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -27,7 +43,7 @@ def require_admin_login(f):
 @require_admin_login
 def users():
     users = get_all_users()
-    return render_template("admin/users.html", users=users)
+    return render_template("admin/users.html", users=users, timezones=US_TIMEZONES)
 
 @admin_bp.route("/logs")
 @require_admin_login
@@ -67,6 +83,12 @@ def add_user():
 
     if not phone or not local_time:
         flash("Phone and time are required", "danger")
+        return redirect(url_for("admin.users"))
+
+    try:
+        phone = normalize_phone(phone)
+    except ValueError:
+        flash("Invalid phone number — use 10-digit US number or E.164 format", "danger")
         return redirect(url_for("admin.users"))
 
     db = SessionLocal()
@@ -188,6 +210,11 @@ def request_settings_link():
     if not phone:
         abort(400, "Missing phone")
 
+    try:
+        phone = normalize_phone(phone)
+    except ValueError:
+        abort(400, "Invalid phone number")
+
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(phone=phone).first()
@@ -215,8 +242,34 @@ def request_settings_link():
 def settings_page():
     token_value = request.args.get("token")
     if not token_value:
-        abort(400, "Missing token")
-    return render_template("settings.html", token=token_value)
+        return render_template("settings.html", token=None, error="Missing or invalid link.")
+
+    db = SessionLocal()
+    try:
+        token = db.query(SettingsToken).filter_by(token=hash_token(token_value)).first()
+        if not token:
+            return render_template("settings.html", token=None, error="This link is invalid.")
+        if token.used:
+            return render_template("settings.html", token=None, error="This link has already been used.")
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if token.expires_at < now:
+            return render_template("settings.html", token=None, error="This link has expired.")
+
+        user = db.query(User).get(token.user_id)
+        if not user:
+            return render_template("settings.html", token=None, error="User not found.")
+
+        return render_template(
+            "settings.html",
+            token=token_value,
+            error=None,
+            prefill_time=user.local_time,
+            prefill_timezone=user.timezone,
+            timezones=US_TIMEZONES,
+        )
+    finally:
+        db.close()
 
 # ---------- SETTINGS API (PREFILL) ----------
 @settings_bp.route("/api/settings", methods=["GET"])
@@ -227,7 +280,7 @@ def get_settings():
 
     db = SessionLocal()
     try:
-        token = db.query(SettingsToken).filter_by(token=token_value).first()
+        token = db.query(SettingsToken).filter_by(token=hash_token(token_value)).first()
         if not token:
             abort(404, "Invalid token")
         if token.used:
@@ -261,7 +314,7 @@ def update_settings():
 
     db = SessionLocal()
     try:
-        token = db.query(SettingsToken).filter_by(token=token_value).first()
+        token = db.query(SettingsToken).filter_by(token=hash_token(token_value)).first()
         if not token:
             abort(404, "Invalid token")
         if token.used:

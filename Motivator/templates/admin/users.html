@@ -4,9 +4,13 @@
 <h2>Users</h2>
 
 <form method="post" action="/admin/users/add">
-  <input type="text" name="phone" placeholder="Phone" required>
+  <input type="text" name="phone" placeholder="Phone (e.g. +14155550100)" required>
   <input type="time" name="local_time" required>
-  <input type="hidden" name="timezone" value="America/New_York">
+  <select name="timezone">
+    {% for tz_value, tz_label in timezones %}
+    <option value="{{ tz_value }}">{{ tz_label }}</option>
+    {% endfor %}
+  </select>
   <button type="submit">Add User</button>
 </form>
 
