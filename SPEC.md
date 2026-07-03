@@ -88,6 +88,11 @@ Backend behavior
 	•	Mark token used = true
 	•	Optionally redirect to confirmation page
 
+5.5 Rate Limiting on Settings Link Requests
+	•	A phone number may request at most one settings link per 30-minute window.
+	•	Requesting a new link before the window expires returns HTTP 429 with an informative message (e.g. how long until the number can request again).
+	•	Requesting a new link after the window expires invalidates any previously issued, unexpired token for that phone number before issuing the new one.
+
 6. Delivery Preferences Schema
 Delivery preferences are stored directly on the users table (no separate table).
 users table
@@ -147,3 +152,11 @@ Backend guarantees
 	•	App is a stateless trigger
 	•	Cron is the source of truth for delivery timing
 Every decision favors determinism and auditability over UX complexity.
+
+11. Admin Panel
+11.1 Post-Launch Scope
+	•	Add-user functionality is removed at launch.
+	•	Delete, quotes management, and log viewing remain.
+	•	Log pages must surface all errors currently only visible in Render logs — this is a known gap to fix before launch.
+11.2 Known Issue: Swallowed Errors
+	•	Some errors are swallowed before reaching the admin log tables. Needs investigation and fix before launch.
