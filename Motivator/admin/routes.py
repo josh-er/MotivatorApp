@@ -6,15 +6,44 @@ from Motivator.db import SessionLocal
 from Motivator.models import User, Quote, SettingsToken
 from datetime import datetime, date, timedelta, timezone
 from functools import wraps
+import hmac
 import math
+import os
+import secrets
 from zoneinfo import ZoneInfo
 from Motivator.send_quotes import send_compliance
+from Motivator.send_sms import send_sms
 from Motivator.event_logger import log_event
 from Motivator.models import EventLog
 from sqlalchemy import desc
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 settings_bp = Blueprint("settings", __name__)
+
+BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
+
+
+def _get_or_create_csrf_token():
+    token = session.get("csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["csrf_token"] = token
+    return token
+
+
+@admin_bp.context_processor
+def inject_csrf_token():
+    return {"csrf_token": _get_or_create_csrf_token}
+
+
+@admin_bp.before_request
+def validate_csrf():
+    if request.method != "POST":
+        return
+    expected = session.get("csrf_token") or ""
+    submitted = request.form.get("csrf_token") or ""
+    if not expected or not hmac.compare_digest(submitted, expected):
+        abort(400, "Invalid or missing CSRF token")
 
 US_TIMEZONES = [
     ("America/New_York",             "Eastern (New York)"),
@@ -241,11 +270,18 @@ def request_settings_link():
     except ValueError:
         abort(400, "Invalid phone number")
 
+    generic_response = {
+        "status": "ok",
+        "message": "If that phone number is registered, a settings link has been sent via SMS.",
+    }
+
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(phone=phone).first()
         if not user:
-            abort(404, "User not found")
+            # Same response shape as the success path below — do not reveal
+            # whether this phone number belongs to a registered user.
+            return jsonify(generic_response), 200
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -279,6 +315,12 @@ def request_settings_link():
         db.commit()
 
         token = generate_settings_token(user.id)
+        settings_link = f"{BASE_URL}/settings?token={token}"
+
+        send_sms(
+            user.phone,
+            f"Update your Motivator delivery time: {settings_link}"
+        )
 
         log_event(
             db,
@@ -288,9 +330,7 @@ def request_settings_link():
         )
         db.commit()
 
-        link = f"https://motivatorapp.onrender.com/settings?token={token}"
-
-        return jsonify({"settings_link": link}), 200
+        return jsonify(generic_response), 200
     finally:
         db.close()
 

@@ -4,6 +4,7 @@
 <h2>Quotes</h2>
 
 <form method="post" action="/admin/quotes/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input name="text" placeholder="Quote text" required>
     <button type="submit">Add Quote</button>
 </form>
@@ -21,6 +22,7 @@
       <td>{{ quote.text }}</td>
       <td>
         <form method="post" action="/admin/quotes/delete/{{ quote.id }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit">Delete</button>
         </form>
       </td>

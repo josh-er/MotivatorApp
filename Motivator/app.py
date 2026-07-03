@@ -1,13 +1,18 @@
 import os
+import hmac
 import logging
+import threading
+import time
 from flask import Flask, request, jsonify, session, redirect, url_for, flash
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import desc
 from twilio.twiml.messaging_response import MessagingResponse
-from Motivator.db import SessionLocal, engine
+from twilio.request_validator import RequestValidator
+from Motivator.db import SessionLocal, engine, IS_PRODUCTION
 from Motivator.user_service import create_user
-from Motivator.models import User
+from Motivator.models import User, SettingsToken
 from Motivator.admin.routes import admin_bp, settings_bp
 from Motivator.send_quotes import send_quote_to_user, send_compliance
 from dotenv import load_dotenv
@@ -19,18 +24,98 @@ from Motivator.event_logger import log_event
 load_dotenv()
 
 ADMIN_KEY = os.getenv("ADMIN_KEY")
-ENV = os.getenv("ENV", "development")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+
+logger = logging.getLogger(__name__)
+
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+if IS_PRODUCTION:
+    # Never fall back to a hardcoded secret/password in production — fail
+    # loudly at startup instead of silently running with a known default
+    # that would let anyone forge an admin session or log in outright.
+    if not FLASK_SECRET_KEY:
+        raise RuntimeError(
+            "FLASK_SECRET_KEY is missing in production. Refusing to start "
+            "with a hardcoded fallback secret key."
+        )
+    if not ADMIN_PASSWORD:
+        raise RuntimeError(
+            "ADMIN_PASSWORD is missing in production. Refusing to start "
+            "with a hardcoded fallback admin password."
+        )
+else:
+    FLASK_SECRET_KEY = FLASK_SECRET_KEY or "dev-secret"
+    ADMIN_PASSWORD = ADMIN_PASSWORD or "testpass"
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret")
+app.secret_key = FLASK_SECRET_KEY
 app.register_blueprint(admin_bp)
 app.register_blueprint(settings_bp)
 
 def require_admin(req):
     if not ADMIN_KEY:
         return False
-    return req.headers.get("X-Admin-Key") == ADMIN_KEY
+    provided = req.headers.get("X-Admin-Key") or ""
+    return hmac.compare_digest(provided, ADMIN_KEY)
+
+
+# --- Admin login rate limiting ---
+# In-process failed-attempt counter, keyed by client IP. Not persisted or
+# shared across workers — Render's gunicorn config runs --workers=2, so each
+# worker tracks independently, meaning the effective ceiling is up to
+# LOGIN_MAX_ATTEMPTS per worker rather than a hard global cap. Accepted as a
+# lightweight stopgap for a single shared admin password rather than adding a
+# new DB table; revisit with a persisted counter if this needs to be airtight.
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+_login_attempts = {}
+_login_attempts_lock = threading.Lock()
+
+
+def _client_ip(req):
+    forwarded = req.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return req.remote_addr or "unknown"
+
+
+def _login_rate_limited(ip):
+    now = time.time()
+    with _login_attempts_lock:
+        attempts = [t for t in _login_attempts.get(ip, []) if now - t < LOGIN_WINDOW_SECONDS]
+        _login_attempts[ip] = attempts
+        return len(attempts) >= LOGIN_MAX_ATTEMPTS
+
+
+def _record_login_failure(ip):
+    with _login_attempts_lock:
+        _login_attempts.setdefault(ip, []).append(time.time())
+
+
+def _clear_login_attempts(ip):
+    with _login_attempts_lock:
+        _login_attempts.pop(ip, None)
+
+
+def validate_twilio_request(req):
+    """Verify the request actually came from Twilio using the X-Twilio-Signature
+    header. Fails closed: missing/misconfigured auth token or a bad/missing
+    signature is treated as invalid."""
+    if not TWILIO_AUTH_TOKEN:
+        logger.error("TWILIO_AUTH_TOKEN not set — rejecting inbound SMS webhook")
+        return False
+
+    signature = req.headers.get("X-Twilio-Signature", "")
+    if not signature:
+        return False
+
+    validator = RequestValidator(TWILIO_AUTH_TOKEN)
+    url = BASE_URL.rstrip("/") + req.path
+    return validator.validate(url, req.form.to_dict(), signature)
 
 # --- Public routes ---
 @app.route("/")
@@ -45,6 +130,12 @@ def health():
 
 @app.route("/submit", methods=["POST"])
 def submit():
+    # NOTE: no per-phone/per-IP rate limiting here. The `users.phone` unique
+    # constraint permanently blocks a second signup for a number that already
+    # has a user row, but an attacker can still submit many *distinct*
+    # numbers, each triggering one real compliance SMS (an SMS-reflector /
+    # cost-abuse risk). Accepted as residual risk for this pass — revisit
+    # with IP-based throttling or a signup CAPTCHA post-launch.
     data = request.json or {}
     phone = data.get("phone")
     local_time = data.get("local_time")
@@ -67,6 +158,12 @@ def submit():
     except Exception:
         return jsonify({"error": "Invalid timezone"}), 400
 
+    if local_time:
+        try:
+            datetime.strptime(local_time, "%H:%M")
+        except ValueError:
+            return jsonify({"error": "Invalid local_time — expected HH:MM"}), 400
+
     db = SessionLocal()
     try:
         user = create_user(
@@ -78,7 +175,7 @@ def submit():
         db.commit()
 
         send_compliance(db, user)
-        log_event(db, user.id, "user_signed_up_via_app", "submit")
+        log_event(db, user_id=user.id, event_type="user_signed_up_via_app", source="submit")
         db.commit()
 
         return jsonify({
@@ -96,6 +193,10 @@ def submit():
 
 @app.route("/sms/inbound", methods=["POST"])
 def sms_inbound():
+    if not validate_twilio_request(request):
+        logger.warning("Rejected inbound SMS webhook with invalid Twilio signature")
+        return jsonify({"error": "invalid signature"}), 403
+
     db = SessionLocal()
     from_number = request.form.get("From")
     body = request.form.get("Body", "").strip().upper()
@@ -119,15 +220,42 @@ def sms_inbound():
             user.opted_in = True
             db.commit()
 
-            token = generate_settings_token(user.id)
-            settings_link = f"{BASE_URL}/settings?token={token}"
-
-            send_sms(
-                user.phone,
-                f"You're re-subscribed to Motivator! Update your delivery time: {settings_link}"
+            # Rate limit settings-link issuance the same way
+            # request_settings_link() does (SPEC §5.5): at most one link per
+            # phone number per 30-minute window, measured from the most
+            # recently issued token.
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            most_recent = (
+                db.query(SettingsToken)
+                .filter_by(user_id=user.id)
+                .order_by(desc(SettingsToken.created_at))
+                .first()
+            )
+            within_window = (
+                most_recent is not None
+                and now < most_recent.created_at + timedelta(minutes=30)
             )
 
-            log_event(db, user.id, "user_opt_in", "sms_inbound")
+            if not within_window:
+                # Window has passed (or no prior token) — invalidate any
+                # unexpired, unused tokens before issuing a new one.
+                db.query(SettingsToken).filter(
+                    SettingsToken.user_id == user.id,
+                    SettingsToken.used.is_(False),
+                    SettingsToken.expires_at > now,
+                ).update({"used": True})
+                db.commit()
+
+                token = generate_settings_token(user.id)
+                settings_link = f"{BASE_URL}/settings?token={token}"
+
+                send_sms(
+                    user.phone,
+                    f"You're re-subscribed to Motivator! Update your delivery time: {settings_link}"
+                )
+
+            log_event(db, user_id=user.id, event_type="user_opt_in", source="sms_inbound")
+            db.commit()
         return str(resp)
 
 
@@ -176,17 +304,22 @@ def admin_test_send():
     finally:
         db.close()
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "testpass")
-
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        password = request.form.get("password")
-        if password == ADMIN_PASSWORD:
+        ip = _client_ip(request)
+        if _login_rate_limited(ip):
+            flash("Too many login attempts. Please wait a few minutes and try again.", "danger")
+            return "Too many login attempts. Please wait a few minutes and try again.", 429
+
+        password = request.form.get("password") or ""
+        if hmac.compare_digest(password, ADMIN_PASSWORD):
+            _clear_login_attempts(ip)
             session["is_admin"] = True
             flash("Logged in as admin", "success")
             return redirect(url_for("admin.users"))
         else:
+            _record_login_failure(ip)
             flash("Incorrect password", "danger")
     return """
         <form method="post">
@@ -204,7 +337,7 @@ def admin_logout():
     
 
 # --- Development only routes ---
-if ENV != "production":
+if not IS_PRODUCTION:
 
     @app.route("/init-db")
     def init_db():

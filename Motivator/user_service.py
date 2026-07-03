@@ -28,6 +28,6 @@ def create_user(phone: str, local_time: str | None, timezone: str | None):
         local_time=local_time,
         timezone=timezone,
         # time is a legacy field, noting for reference
-        time=dt_utc.time(),
+        time=dt_utc.time().isoformat(),
         last_sent=None
     )

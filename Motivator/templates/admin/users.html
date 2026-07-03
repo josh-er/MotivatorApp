@@ -4,6 +4,7 @@
 <h2>Users</h2>
 
 <form method="post" action="/admin/users/add">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="text" name="phone" placeholder="Phone (e.g. +14155550100)" required>
   <input type="time" name="local_time" required>
   <select name="timezone">
@@ -20,6 +21,7 @@
       <td>{{ user.phone }}</td>
       <td>
         <form method="post" action="/admin/users/delete/{{ user.id }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit">Delete</button>
         </form>
       </td>
