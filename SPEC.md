@@ -9,6 +9,12 @@ Motivator is a phone-number–driven SMS motivation service. Users receive sched
 	•	Scheduler: Cron (or equivalent scheduled job runner)
 The app has no authentication, no sessions, no local persistence.
 
+2.1 Database Configuration
+	•	Production store: PostgreSQL, hosted on Render. `DATABASE_URL` is provided via the Render environment.
+	•	Local dev store: SQLite (`Motivator/motivator.db`), used only when no `DATABASE_URL` is set and the process is not running in production.
+	•	Production is detected via the `RENDER` env var (set automatically by Render) or `FLASK_ENV=production`.
+	•	Fail-loud guarantee: in production, if `DATABASE_URL` is missing or is not a `postgresql://` URL, the app raises `RuntimeError` at startup instead of silently falling back to SQLite. This prevents the scheduler or web app from ever reading/writing the wrong database in production.
+
 3. User Identity Model
 	•	The only identifier is phone number, normalized to E.164 format.
 	◦	Example: +14155552671

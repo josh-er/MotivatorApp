@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-06-25
+Last updated: 2026-06-29
 
 ---
 
@@ -50,16 +50,15 @@ The following spec errors were corrected to reflect intentional implementation c
 ### #10 — Timezone selector expanded (§5.3)
 `US_TIMEZONES` constant defined in `admin/routes.py` with 12 entries covering all major US zones including Phoenix (MT no DST), Honolulu (Hawaii no DST), Anchorage/Nome/Juneau (Alaska), Adak (Hawaii-Aleutian), Indianapolis (Eastern no DST), and Boise (Mountain). Passed server-side to both `settings.html` and `admin/users.html`; both now render options with Jinja2. The admin add-user form also upgraded from a hidden `America/New_York` input to a full select.
 
----
+### iOS signup form — consent, local_time, timezone (§4, TCPA)
+`PhoneEntryView` and `PhoneEntryViewModel` updated to match the backend contract:
+- **Consent checkbox**: custom checkbox control (SF Symbols `checkmark.square.fill` / `square`) with the approved TCPA disclosure text. Tapping anywhere on the row (icon or text) toggles the state.
+- **Timezone picker**: sorted `Picker` over the same 12-zone list as the backend's `US_TIMEZONES` constant in `admin/routes.py`. Defaults to nil ("Select timezone") — a real selection is required.
+- **Delivery time**: `DatePicker` (hour and minute only, `.compact` style).
+- **Payload**: `POST /submit` now sends `phone`, `local_time` (formatted `HH:mm`), `timezone`, and `consent: true`.
+- **Submit guard**: button disabled until both consent is checked and a timezone is selected. `signUp()` also guards on `canSubmit` as a belt-and-suspenders check.
 
-## Pending iOS app changes
-
-The backend changes in a prior session require corresponding updates to the iOS app. These are outside the Python codebase but are blocking for the signup flow to work end-to-end:
-
-- **Consent checkbox**: add an unchecked checkbox with the approved disclosure text before the submit button.
-- **Field rename**: submit `local_time` (not `time`) in the POST /submit body.
-- **Consent field**: include `"consent": true` in the POST /submit body when the checkbox is checked.
-- **Block submit**: the submit button should be disabled until consent is checked.
+Backend and frontend are now aligned on the `/submit` contract. Ready for end-to-end testing.
 
 ---
 

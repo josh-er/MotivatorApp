@@ -16,17 +16,23 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# 2. Local fallback (SQLite inside Motivator folder)
-if not DATABASE_URL:
+# Production is any environment running on Render, or Flask explicitly set to production.
+IS_PRODUCTION = bool(os.getenv("RENDER")) or os.getenv("FLASK_ENV") == "production"
+
+if IS_PRODUCTION:
+    # Never fall back to SQLite in production — fail loudly instead of
+    # silently writing/reading the wrong database.
+    if not DATABASE_URL or not DATABASE_URL.startswith("postgresql"):
+        raise RuntimeError(
+            "DATABASE_URL is missing or is not a PostgreSQL URL in production "
+            "(RENDER env var or FLASK_ENV=production detected). Refusing to "
+            "fall back to SQLite."
+        )
+elif not DATABASE_URL:
+    # 2. Local dev fallback (SQLite inside Motivator folder)
     fallback_path = os.path.join(os.path.dirname(__file__), "motivator.db")
     DATABASE_URL = f"sqlite:///{fallback_path}"
     print(f"[DB] No DATABASE_URL set. Using local fallback: {DATABASE_URL}")
-
-elif DATABASE_URL.endswith("motivator.db") and not os.path.exists("motivator.db"):
-    # In case DATABASE_URL points to a missing file (common dev bug)
-    fallback_path = os.path.join(os.path.dirname(__file__), "motivator.db")
-    DATABASE_URL = f"sqlite:///{fallback_path}"
-    print(f"[DB] Local motivator.db not found. Using fallback path: {fallback_path}")
 
 # 3. Create engine + session
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
