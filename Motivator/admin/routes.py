@@ -4,8 +4,9 @@ from Motivator.utils.phone import normalize_phone
 from .services import get_all_users, get_message_logs
 from Motivator.db import SessionLocal
 from Motivator.models import User, Quote, SettingsToken
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timedelta, timezone
 from functools import wraps
+import math
 from zoneinfo import ZoneInfo
 from Motivator.send_quotes import send_compliance
 from Motivator.event_logger import log_event
@@ -220,6 +221,37 @@ def request_settings_link():
         user = db.query(User).filter_by(phone=phone).first()
         if not user:
             abort(404, "User not found")
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        # Rate limit: at most one settings link per phone number per 30-minute
+        # window, measured from when the most recent link was issued.
+        # NOTE: no row-level locking here — two truly concurrent requests for
+        # the same phone number could both pass this check and each create a
+        # token. Acceptable for this low-traffic, user-triggered flow; revisit
+        # with SELECT ... FOR UPDATE if that changes.
+        most_recent = (
+            db.query(SettingsToken)
+            .filter_by(user_id=user.id)
+            .order_by(desc(SettingsToken.created_at))
+            .first()
+        )
+        if most_recent:
+            window_end = most_recent.created_at + timedelta(minutes=30)
+            if now < window_end:
+                wait_minutes = math.ceil((window_end - now).total_seconds() / 60)
+                return jsonify({
+                    "error": f"Please wait {wait_minutes} minute(s) before requesting another settings link."
+                }), 429
+
+        # Window has passed (or no prior token) — invalidate any unexpired,
+        # unused tokens for this user before issuing a new one.
+        db.query(SettingsToken).filter(
+            SettingsToken.user_id == user.id,
+            SettingsToken.used.is_(False),
+            SettingsToken.expires_at > now,
+        ).update({"used": True})
+        db.commit()
 
         token = generate_settings_token(user.id)
 
