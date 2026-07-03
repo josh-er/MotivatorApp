@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-06-29
+Last updated: 2026-07-03
 
 ---
 
@@ -60,8 +60,22 @@ The following spec errors were corrected to reflect intentional implementation c
 
 Backend and frontend are now aligned on the `/submit` contract. Ready for end-to-end testing.
 
+### Admin log gap closed — swallowed errors now reach EventLog (§11.2)
+Investigation found a root-cause bug: `log_event()` is keyword-only (`db, *, user_id, event_type, source`) but `send_quotes.py` called it positionally, raising `TypeError` on every successful quote send and masking the failure inside a silent `except Exception` block — the SMS still went out, but `EventLog` never got the `"quote_sent"` row. Fixes:
+- Corrected the `log_event` call site in `send_quotes.py`.
+- Added a nullable `error_message` column to `EventLog` (migration `add_error_message_to_event_logs`, applied to the Render Postgres DB).
+- `send_quotes.py`'s per-user send failure path and `scheduler.py`'s top-level loop failure path now both write an `EventLog` row (`quote_send_failed`, `scheduler_loop_failed`) with `error_message` populated, using a dedicated DB session so a broken primary session can't block the log write. Neither re-raises, since both run inside loops that must keep processing remaining users/ticks.
+- All six previously flash-only admin panel exception handlers (`add_user` ×3, `delete_user`, `add_quote`, `delete_quote`) now also write an `EventLog` row (`source="admin"`, `error_message` populated) via a shared `_log_admin_failure()` helper, alongside the existing `flash()` messages.
+
+Admins can now see every error case above in `/admin/events` — no more scenarios that require checking Render's raw logs directly.
+
+### Rate limiting on settings link requests (§5.5)
+`POST /request-settings-link` now enforces one link per phone number per 30-minute window (measured from the most recently issued token's `created_at`). Requesting within the window returns HTTP 429 with the remaining wait time. Requesting after the window invalidates any prior unexpired, unused token for that phone before issuing a new one. Known limitation (documented in code): no row-level locking, so two truly concurrent requests could both pass the check — acceptable for this low-traffic, user-triggered flow.
+
 ---
 
-## Spec sections that still describe unimplemented behavior
+## Remaining pre-launch items
 
-None — all known gaps are resolved.
+- **Security audit** — not yet performed.
+- **Testing pass** — end-to-end testing across signup, re-activation, settings link, and scheduled sends has not yet been executed.
+- **Admin add-user removal** — per SPEC.md §11.1, add-user functionality must be removed from the admin panel before launch (delete, quotes management, and log viewing remain in scope).
