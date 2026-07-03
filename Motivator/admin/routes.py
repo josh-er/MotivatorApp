@@ -31,6 +31,23 @@ US_TIMEZONES = [
     ("America/Boise",                "Mountain (Boise)"),
 ]
 
+def _log_admin_failure(event_type, error_message, user_id=None):
+    """Record an admin-panel failure to EventLog, in its own session, so a
+    failed/rolled-back handler session can't prevent the failure from being
+    persisted. Mirrors the pattern used in send_quotes.py / scheduler.py."""
+    log_db = SessionLocal()
+    try:
+        log_event(
+            log_db,
+            user_id=user_id,
+            event_type=event_type,
+            source="admin",
+            error_message=error_message,
+        )
+        log_db.commit()
+    finally:
+        log_db.close()
+
 def require_admin_login(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -88,8 +105,9 @@ def add_user():
 
     try:
         phone = normalize_phone(phone)
-    except ValueError:
+    except ValueError as e:
         flash("Invalid phone number — use 10-digit US number or E.164 format", "danger")
+        _log_admin_failure("admin_add_user_invalid_phone", error_message=str(e))
         return redirect(url_for("admin.users"))
 
     db = SessionLocal()
@@ -103,6 +121,7 @@ def add_user():
             today_local = datetime.now(tz).date()
         except Exception as e:
             flash(f"Invalid time or timezone: {e}", "danger")
+            _log_admin_failure("admin_add_user_invalid_timezone", error_message=str(e))
             return redirect(url_for("admin.users"))
 
         user = User(
@@ -121,6 +140,7 @@ def add_user():
     except Exception as e:
         db.rollback()
         flash(f"Error adding user: {e}", "danger")
+        _log_admin_failure("admin_add_user_failed", error_message=str(e), user_id=getattr(user, "id", None))
 
     finally:
         db.close()
@@ -134,14 +154,17 @@ def delete_user(user_id):
     try:
         user = db.query(User).get(user_id)
         if user:
+            deleted_user_id = user.id
+            deleted_user_phone = user.phone
             db.delete(user)
             try:
                 db.commit()
-                flash(f"User {user.phone} deleted. All associated sent quotes removed.", "success")
+                flash(f"User {deleted_user_phone} deleted. All associated sent quotes removed.", "success")
             except Exception as e:
                 db.rollback()
                 print("DELETE FAILED:", e)
                 flash(f"Error deleting user: {e}", "danger")
+                _log_admin_failure("admin_delete_user_failed", error_message=str(e), user_id=deleted_user_id)
         else:
             flash("User not found", "warning")
     finally:
@@ -165,6 +188,7 @@ def add_quote():
         except Exception as e:
             db.rollback()
             flash(f"Error adding quote: {e}", "danger")
+            _log_admin_failure("admin_add_quote_failed", error_message=str(e))
     finally:
         db.close()
     return redirect(url_for("admin.quotes"))
@@ -183,6 +207,7 @@ def delete_quote(quote_id):
             except Exception as e:
                 db.rollback()
                 flash(f"Error deleting quote: {e}", "danger")
+                _log_admin_failure("admin_delete_quote_failed", error_message=str(e))
         else:
             flash("Quote not found", "warning")
     finally:
