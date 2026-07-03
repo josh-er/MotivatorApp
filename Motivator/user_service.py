@@ -27,7 +27,9 @@ def create_user(phone: str, local_time: str | None, timezone: str | None):
         phone=phone,
         local_time=local_time,
         timezone=timezone,
-        # time is a legacy field, noting for reference
+        # `time` is a write-only legacy column: nothing in the codebase reads
+        # it back, it predates `local_time`/`timezone`, and it should be
+        # dropped in a post-launch cleanup.
         time=dt_utc.time().isoformat(),
         last_sent=None
     )

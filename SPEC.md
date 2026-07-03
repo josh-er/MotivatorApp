@@ -40,8 +40,9 @@ Step 2: SMS — Re-activation (existing opted-out users only)
 Step 3: App — Change Preferences
 	•	User taps “Update delivery time”.
 	•	App calls POST /request-settings-link with their phone number.
-	•	Backend generates a single-use, time-limited settings link and sends it back.
-	•	User opens the link to update local_time and timezone.
+	•	Backend generates a single-use, time-limited settings link and sends it via SMS to that phone number. The link is never returned in the API response — only an SMS delivery can hand a caller a usable settings link, matching §10's "SMS is the control surface."
+	•	The API response is a generic acknowledgement, identical whether or not the phone number belongs to a registered user (prevents phone-number enumeration via this endpoint).
+	•	User receives the SMS and opens the link to update local_time and timezone.
 
 5. Settings Link (Core Feature)
 5.1 What the Link Is
@@ -145,6 +146,7 @@ Backend guarantees
 	•	Idempotent START handling
 	•	Hard expiry enforcement for settings links
 	•	Timezone-safe scheduling
+	•	Settings links are delivered exclusively via SMS — never returned in an API response, and no endpoint response reveals whether a given phone number is a registered user
 
 10. Design Intent
 	•	SMS is the control surface

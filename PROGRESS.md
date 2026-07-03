@@ -72,7 +72,7 @@ Admins can now see every error case above in `/admin/events` — no more scenari
 ### Rate limiting on settings link requests (§5.5)
 `POST /request-settings-link` now enforces one link per phone number per 30-minute window (measured from the most recently issued token's `created_at`). Requesting within the window returns HTTP 429 with the remaining wait time. Requesting after the window invalidates any prior unexpired, unused token for that phone before issuing a new one. Known limitation (documented in code): no row-level locking, so two truly concurrent requests could both pass the check — acceptable for this low-traffic, user-triggered flow.
 
-### Security audit (2026-07-03)
+### Security audit — COMPLETE (2026-07-03)
 Full-codebase review for SQL injection, token predictability, webhook auth, and rate limiting. No SQL injection found (ORM parameterized everywhere); tokens already `secrets.token_urlsafe` + sha256-hashed at rest. Fixes applied:
 
 - **Twilio webhook signature verification** — `POST /sms/inbound` had zero authentication; anyone could forge `From`/`Body` to opt any user in or out. Now validated via `twilio.request_validator.RequestValidator` against `X-Twilio-Signature`, fails closed (403) if the signature is missing/invalid or `TWILIO_AUTH_TOKEN` isn't configured.
@@ -84,17 +84,24 @@ Full-codebase review for SQL injection, token predictability, webhook auth, and 
 - **Non-constant-time secret comparisons** — `admin_login` password check and both `X-Admin-Key` checks (`app.py`, `admin/auth.py`) now use `hmac.compare_digest`.
 - **CSRF protection on admin panel** — the 4 state-changing admin forms (add/delete user, add/delete quote) had no CSRF protection. Added a per-session token (`secrets.token_urlsafe`) via a `context_processor` + `before_request` hook scoped to `admin_bp`, validated with `hmac.compare_digest`. No new dependency.
 - **Admin login rate limiting** — no brute-force protection on `/admin/login`. Added an in-process, IP-keyed lockout (5 attempts / 5 minutes). Documented limitation: not persisted or shared across gunicorn's `--workers=2`, so the effective ceiling is up to 2× the stated limit — accepted tradeoff for a single shared admin password rather than a new DB table.
-- **`POST /request-settings-link` account-takeover bug** — this endpoint never sent the settings link via SMS at all (`send_sms` wasn't even imported); it returned the raw, usable link directly in the JSON response. Anyone who knew a user's phone number could fetch and use a valid settings-change link without any SMS interception, defeating the "SMS is the control surface" design (§10). Now sends the link via `send_sms` (matching the `START` handler) and always returns an identical generic `{"status": "ok", ...}` body whether or not the phone is registered — this also closes a phone-number-enumeration side channel the same bug created. Also fixed a hardcoded `https://motivatorapp.onrender.com` domain in the link — now uses the `BASE_URL` env var like the rest of the app.
+- **`POST /request-settings-link` account-takeover bug** — this endpoint never sent the settings link via SMS at all (`send_sms` wasn't even imported); it returned the raw, usable link directly in the JSON response. Anyone who knew a user's phone number could fetch and use a valid settings-change link without any SMS interception, defeating the "SMS is the control surface" design (§10). Now sends the link via `send_sms` (matching the `START` handler) and always returns an identical generic `{"status": "ok", ...}` body whether or not the phone is registered — this also closes a phone-number-enumeration side channel the same bug created. Also fixed a hardcoded `https://motivatorapp.onrender.com` domain in the link — now uses the `BASE_URL` env var like the rest of the app. **The link is no longer present in the response body under any circumstance** (SPEC.md §4 updated accordingly).
 
-**iOS follow-up required**: the iOS app's source isn't in this repo, so it couldn't be verified directly, but it likely reads `response.settings_link` from `POST /request-settings-link` per the original API contract. That field no longer exists in the response — the app needs to stop expecting a link in the response body and instead tell the user to check their SMS.
+**Residual risk (accepted, deferred to post-launch)**: `POST /submit` has no per-phone or per-IP rate limiting. The `users.phone` unique constraint permanently blocks a second signup for a number that already has a user, but an attacker can still submit many *distinct* numbers, each triggering one real compliance SMS (an SMS-reflector / cost-abuse risk). Deferred until proper IP-based throttling (or a signup CAPTCHA) can be added post-launch.
 
-- Known residual risk, deliberately not fixed this pass: `POST /submit` has no per-phone or per-IP rate limiting. The `users.phone` unique constraint permanently blocks a second signup for a number that already has a user, but an attacker can still submit many *distinct* numbers, each triggering one real compliance SMS (an SMS-reflector / cost-abuse risk). Revisit with IP-based throttling or a signup CAPTCHA post-launch.
+**Audit status: all identified findings fixed except the one residual risk above, which is a deliberate, accepted tradeoff — not an oversight.**
 
 ---
 
 ## Remaining pre-launch items
 
-- **iOS app update** — stop reading `settings_link` from `POST /request-settings-link`'s response body (see security audit above); direct the user to check SMS instead.
+- **iOS app update** — `POST /request-settings-link` no longer returns `settings_link` in the response body (it's sent via SMS only, see security audit above). The iOS app needs a corresponding update: stop reading `settings_link` from the response and instead tell the user to check their SMS for the link.
 - **Testing pass** — end-to-end testing across signup, re-activation, settings link, and scheduled sends has not yet been executed.
 - **Admin add-user removal** — per SPEC.md §11.1, add-user functionality must be removed from the admin panel before launch (delete, quotes management, and log viewing remain in scope).
 - **Verify Render dashboard env vars** — confirm `FLASK_SECRET_KEY`, `ADMIN_PASSWORD`, and `ADMIN_KEY` are actually set in the Render dashboard for the web service (not just locally) — `render.yaml` doesn't declare them, and the app now refuses to start in production without the first two.
+
+---
+
+## Post-launch cleanup
+
+- **`POST /submit` rate limiting** — accepted residual risk from the security audit (see above); revisit post-launch with IP-based throttling or a signup CAPTCHA.
+- **Remove legacy `User.time` column** — write-only field set in `user_service.py::create_user()`; nothing in the codebase reads it back. Predates `local_time`/`timezone` and was only kept "for compatibility during migration" (see `models.py`). Drop the column and the assignment once confirmed nothing external depends on it.
