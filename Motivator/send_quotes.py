@@ -98,12 +98,26 @@ def send_quote_to_user(db, user):
             cycle=user.cycle or 1,
         ))
 
-        log_event(db, user.id, "quote_sent", "scheduler")
+        log_event(db, user_id=user.id, event_type="quote_sent", source="scheduler")
         db.commit()
         return "sent"
 
     except Exception as e:
         db.commit()
+
+        log_db = SessionLocal()
+        try:
+            log_event(
+                log_db,
+                user_id=user.id,
+                event_type="quote_send_failed",
+                source="scheduler",
+                error_message=str(e),
+            )
+            log_db.commit()
+        finally:
+            log_db.close()
+
         return "failed"
 
 

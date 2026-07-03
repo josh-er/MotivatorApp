@@ -8,6 +8,7 @@ from Motivator.db import SessionLocal
 from Motivator.models import User
 from Motivator.send_quotes import send_users
 from Motivator.db import engine
+from Motivator.event_logger import log_event
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -98,6 +99,19 @@ def run_scheduler():
 
         except Exception as e:
             logger.exception(f"Scheduler loop failed: {e}")
+
+            log_db = SessionLocal()
+            try:
+                log_event(
+                    log_db,
+                    user_id=None,
+                    event_type="scheduler_loop_failed",
+                    source="scheduler",
+                    error_message=str(e),
+                )
+                log_db.commit()
+            finally:
+                log_db.close()
         finally:
             db.close()
 

@@ -60,6 +60,7 @@ class EventLog(Base):
 
     event_type = Column(String, nullable=False)
     source = Column(String, nullable=False)
+    error_message = Column(String, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
