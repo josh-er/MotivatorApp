@@ -90,12 +90,24 @@ Full-codebase review for SQL injection, token predictability, webhook auth, and 
 
 **Audit status: all identified findings fixed except the one residual risk above, which is a deliberate, accepted tradeoff — not an oversight.**
 
+### Testing pass — COMPLETE (2026-07-03)
+Added an automated `pytest` suite (`tests/`, `pytest.ini`, `requirements-dev.txt`) covering every flow below via Flask's test client plus direct DB manipulation for time-based states (token expiry, rate-limit windows). 35 tests, all passing:
+- `test_submit.py` — valid signup, duplicate phone, missing consent (absent + `false`), malformed `local_time`, invalid phone format
+- `test_sms_inbound.py` — unknown-number START, opted-out START re-activation, STOP, forged/unsigned webhook requests (403), unknown-number no-op
+- `test_settings_flow.py` — request link, GET valid/expired/used token, POST valid, POST replayed token (403)
+- `test_rate_limiting.py` — settings-link 429 within the 30-min window + success after the window with prior-token invalidation, START re-activation rate limiting
+- `test_scheduler.py` — `is_user_due` correctness, correct user selection at delivery time, `last_sent` dedup, opted-out exclusion
+- `test_admin.py` — wrong password, correct password, 6th-attempt login lockout, CSRF rejected/accepted, `/debug/users` and `/init-db` confirmed unregistered when `RENDER=1`
+
+Test env safety: `tests/conftest.py` sets sqlite/dummy-Twilio env vars before any `Motivator` module is imported, so the real Postgres `DATABASE_URL` and live Twilio credentials in `.env` are never touched.
+
+Also fixed while writing tests: four `SQLAlchemy 2.0` `Query.get()` deprecation warnings surfaced by the suite, in `admin/routes.py` (`delete_user`, `settings_page`, `update_settings`, `get_settings`) — replaced with `db.get(Model, id)`.
+
 ---
 
 ## Remaining pre-launch items
 
 - **iOS app update** — `POST /request-settings-link` no longer returns `settings_link` in the response body (it's sent via SMS only, see security audit above). The iOS app needs a corresponding update: stop reading `settings_link` from the response and instead tell the user to check their SMS for the link.
-- **Testing pass** — end-to-end testing across signup, re-activation, settings link, and scheduled sends has not yet been executed.
 - **Admin add-user removal** — per SPEC.md §11.1, add-user functionality must be removed from the admin panel before launch (delete, quotes management, and log viewing remain in scope).
 - **Verify Render dashboard env vars** — confirm `FLASK_SECRET_KEY`, `ADMIN_PASSWORD`, and `ADMIN_KEY` are actually set in the Render dashboard for the web service (not just locally) — `render.yaml` doesn't declare them, and the app now refuses to start in production without the first two.
 

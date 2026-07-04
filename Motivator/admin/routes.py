@@ -181,7 +181,7 @@ def add_user():
 def delete_user(user_id):
     db = SessionLocal()
     try:
-        user = db.query(User).get(user_id)
+        user = db.get(User, user_id)
         if user:
             deleted_user_id = user.id
             deleted_user_phone = user.phone
@@ -353,7 +353,7 @@ def settings_page():
         if token.expires_at < now:
             return render_template("settings.html", token=None, error="This link has expired.")
 
-        user = db.query(User).get(token.user_id)
+        user = db.get(User, token.user_id)
         if not user:
             return render_template("settings.html", token=None, error="User not found.")
 
@@ -387,7 +387,7 @@ def get_settings():
         if token.expires_at < now:
             abort(403, "Token expired")
 
-        user = db.query(User).get(token.user_id)
+        user = db.get(User, token.user_id)
         if not user:
             abort(404, "User not found")
 
@@ -421,7 +421,7 @@ def update_settings():
         if token.expires_at < now:
             abort(403, "Token expired")
 
-        user = db.query(User).get(token.user_id)
+        user = db.get(User, token.user_id)
         if not user:
             abort(404, "User not found")
 
