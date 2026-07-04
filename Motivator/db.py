@@ -7,6 +7,9 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 load_dotenv(dotenv_path=env_path)
 
+# Dead: not used for any table metadata. All models attach to
+# Motivator.models.Base instead (see models.py); that's the Base that
+# app.py's /init-db and the test suite call create_all/drop_all against.
 Base = declarative_base()
 
 # 1. Try to read DATABASE_URL from env (Render / prod)
