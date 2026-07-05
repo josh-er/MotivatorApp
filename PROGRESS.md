@@ -90,6 +90,9 @@ Full-codebase review for SQL injection, token predictability, webhook auth, and 
 
 **Audit status: all identified findings fixed except the one residual risk above, which is a deliberate, accepted tradeoff — not an oversight.**
 
+### iOS — `POST /request-settings-link` response handling (2026-07-05)
+`PhoneEntryViewModel.requestSettingsLink()` already didn't read `settings_link` from the response — `APIClient.postJSON` doesn't even decode a response body, and the view model just shows a generic message on success. The only leftover was an unused `SettingsLinkResponse` struct (with a `settings_link` field) in `APIModels.swift`, which has been deleted. No behavioral change; item closed.
+
 ### Testing pass — COMPLETE (2026-07-03)
 Added an automated `pytest` suite (`tests/`, `pytest.ini`, `requirements-dev.txt`) covering every flow below via Flask's test client plus direct DB manipulation for time-based states (token expiry, rate-limit windows). 35 tests, all passing:
 - `test_submit.py` — valid signup, duplicate phone, missing consent (absent + `false`), malformed `local_time`, invalid phone format
@@ -107,7 +110,6 @@ Also fixed while writing tests: four `SQLAlchemy 2.0` `Query.get()` deprecation 
 
 ## Remaining pre-launch items
 
-- **iOS app update** — `POST /request-settings-link` no longer returns `settings_link` in the response body (it's sent via SMS only, see security audit above). The iOS app needs a corresponding update: stop reading `settings_link` from the response and instead tell the user to check their SMS for the link.
 - **Admin add-user removal** — per SPEC.md §11.1, add-user functionality must be removed from the admin panel before launch (delete, quotes management, and log viewing remain in scope).
 - **Verify Render dashboard env vars** — confirm `FLASK_SECRET_KEY`, `ADMIN_PASSWORD`, and `ADMIN_KEY` are actually set in the Render dashboard for the web service (not just locally) — `render.yaml` doesn't declare them, and the app now refuses to start in production without the first two.
 

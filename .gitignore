@@ -34,3 +34,10 @@ motivator.log
 # Environment / secrets
 .env.local
 setup_env.py
+
+# Xcode
+DerivedData/
+.build/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
