@@ -54,13 +54,6 @@ struct PhoneEntryView: View {
             .buttonStyle(.borderedProminent)
             .disabled(!vm.canSubmit)
 
-            Divider()
-
-            Button("Get settings link") {
-                vm.requestSettingsLink()
-            }
-            .buttonStyle(.bordered)
-
             if vm.isLoading {
                 ProgressView()
             }
