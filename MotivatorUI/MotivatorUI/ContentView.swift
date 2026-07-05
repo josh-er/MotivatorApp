@@ -8,8 +8,19 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("hasSignedUp") private var hasSignedUp: Bool = false
+    @State private var justSignedUpPhone: String?
+
     var body: some View {
-        PhoneEntryView()
+        if let phone = justSignedUpPhone {
+            PostSignupInfoView(phone: phone)
+        } else if hasSignedUp {
+            ReturningUserView()
+        } else {
+            PhoneEntryView(onSignUpSuccess: { phone in
+                justSignedUpPhone = phone
+            })
+        }
     }
 }
 

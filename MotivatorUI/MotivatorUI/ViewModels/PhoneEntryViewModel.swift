@@ -12,6 +12,11 @@ class PhoneEntryViewModel: ObservableObject {
     var canSubmit: Bool { consentChecked && timezone != nil }
 
     private let client = APIClient()
+    private let onSignUpSuccess: (String) -> Void
+
+    init(onSignUpSuccess: @escaping (String) -> Void = { _ in }) {
+        self.onSignUpSuccess = onSignUpSuccess
+    }
 
     // MARK: - Sign up flow (/submit)
     func signUp() {
@@ -41,7 +46,8 @@ class PhoneEntryViewModel: ObservableObject {
 
                 switch result {
                 case .success:
-                    self.message = "Text START to activate. Then return to request your settings link."
+                    UserDefaults.standard.set(true, forKey: "hasSignedUp")
+                    self.onSignUpSuccess(self.phone)
 
                 case .failure:
                     self.message = "Sign up failed."
@@ -68,7 +74,7 @@ class PhoneEntryViewModel: ObservableObject {
 
                 switch result {
                 case .success:
-                    self.message = "If START was texted, a settings link will be sent."
+                    self.message = "If you're signed up, a settings link will be sent."
 
                 case .failure:
                     self.message = "Request failed."

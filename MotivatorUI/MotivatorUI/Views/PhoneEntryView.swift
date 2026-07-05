@@ -16,7 +16,11 @@ private let supportedTimezones: [(id: String, label: String)] = [
 ]
 
 struct PhoneEntryView: View {
-    @StateObject var vm = PhoneEntryViewModel()
+    @StateObject var vm: PhoneEntryViewModel
+
+    init(onSignUpSuccess: @escaping (String) -> Void = { _ in }) {
+        _vm = StateObject(wrappedValue: PhoneEntryViewModel(onSignUpSuccess: onSignUpSuccess))
+    }
 
     var body: some View {
         VStack(spacing: 24) {
