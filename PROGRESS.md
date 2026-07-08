@@ -125,6 +125,13 @@ Also fixed while writing tests: four `SQLAlchemy 2.0` `Query.get()` deprecation 
 
 Fixing this surfaced a latent bug: `APIClient.postJSON` never inspected the HTTP response status code at all — any non-2xx response (429 included) was reported to callers as `.success`. Added `APIError.httpStatus(Int)`; `postJSON` now checks the status code and surfaces non-2xx responses as `.failure(APIError.httpStatus(code))`. `SettingsLinkViewModel` matches on 429 specifically; `PhoneEntryViewModel`'s generic `.failure` handling is unaffected (previously-silent non-2xx failures on `/submit` are now correctly reported as "Sign up failed.").
 
+### render.yaml audit and requirements.txt cleanup (2026-07-07)
+Audited `render.yaml` against the actual repo: every `buildCommand`/`startCommand` file reference and the `databases:`/`fromDatabase` name pairing were checked for existence and consistency.
+
+- **Scheduler `startCommand` fixed** — was `python Motivator/run_scheduler.py`, a file that doesn't exist anywhere in the repo (the module is `Motivator/scheduler.py`, which has an `if __name__ == "__main__":` block and is already imported elsewhere as `Motivator.scheduler`). This would have made the `motivator-scheduler` worker fail to start on every deploy. Now `python -m Motivator.scheduler`.
+- Web service's `gunicorn Motivator.app:app` target confirmed valid (`app = Flask(__name__)` at `app.py:53`).
+- **`requirements.txt` — removed `APScheduler` and `PyJWT`**, both unused: grepped clean across `Motivator/`, `tests/`, `scripts/`, `migrations/`. `scheduler.py` implements its own polling loop rather than using APScheduler; settings tokens (`utils/tokens.py`) use `hashlib`/`secrets`, not JWT.
+
 ---
 
 ## Remaining pre-launch items

@@ -22,7 +22,7 @@ services:
     name: motivator-scheduler
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: python Motivator/run_scheduler.py
+    startCommand: python -m Motivator.scheduler
     envVars:
       - key: DATABASE_URL
         fromDatabase:
