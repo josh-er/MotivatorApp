@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-07-03
+Last updated: 2026-07-07
 
 ---
 
@@ -106,12 +106,27 @@ Test env safety: `tests/conftest.py` sets sqlite/dummy-Twilio env vars before an
 
 Also fixed while writing tests: four `SQLAlchemy 2.0` `Query.get()` deprecation warnings surfaced by the suite, in `admin/routes.py` (`delete_user`, `settings_page`, `update_settings`, `get_settings`) — replaced with `db.get(Model, id)`.
 
+### MotivatorUI added to the repo, Xcode cruft cleaned up (2026-07-07)
+`MotivatorUI/` moved into the repo as a subfolder. `.gitignore` gained the missing Xcode entries (`DerivedData/`, `.build/`, `*.xcuserstate`, `xcuserdata/`, `.swiftpm/`); a stray `.DS_Store` and committed `xcuserdata/` directories were removed. No `DerivedData`/`.build` were present.
+
+### iOS — returning-user flow and post-signup screen rework (2026-07-07)
+- `PhoneEntryViewModel` now takes an `onSignUpSuccess` closure; a successful `POST /submit` sets `UserDefaults["hasSignedUp"] = true` and invokes it with the phone number instead of just showing a message.
+- `ContentView` routes at launch based on `@AppStorage("hasSignedUp")`: fresh signup → `PostSignupInfoView`, returning user → new `ReturningUserView` (phone field + "Get settings link" button only), otherwise the normal signup form.
+- New shared `SettingsLinkViewModel` backs the phone field + settings-link request on both `ReturningUserView` and `PostSignupInfoView`.
+- `PostSignupInfoView` rewritten: confirmation message ("You're signed up. Check your phone for a confirmation text.") plus a visually distinct card (background + rounded corners) with the phone pre-filled and a "Get settings link" button.
+- All "START" references removed from the app's UI text.
+- The "Get settings link" button and its handler were subsequently removed from `PhoneEntryView`/`PhoneEntryViewModel` (dead code) since that functionality now lives only on `PostSignupInfoView`/`ReturningUserView`.
+
+### iOS — configurable API base URL (2026-07-07)
+`APIEndpoints.baseURL` now resolves via `#if DEBUG`/`#else`: `http://127.0.0.1:5000` for debug builds, `https://motivatorapp.onrender.com` for release builds. Uses Xcode's default `DEBUG` compilation condition on the Debug configuration — no project-settings changes needed. Both configurations verified to build clean.
+
 ---
 
 ## Remaining pre-launch items
 
 - **Admin add-user removal** — per SPEC.md §11.1, add-user functionality must be removed from the admin panel before launch (delete, quotes management, and log viewing remain in scope).
 - **Verify Render dashboard env vars** — confirm `FLASK_SECRET_KEY`, `ADMIN_PASSWORD`, and `ADMIN_KEY` are actually set in the Render dashboard for the web service (not just locally) — `render.yaml` doesn't declare them, and the app now refuses to start in production without the first two.
+- **429 error message copy** — the settings-link request rate limit (`POST /request-settings-link`, §5.5) returns an HTTP 429 with no user-friendly copy in the app; needs proper messaging in the iOS UI instead of a raw/generic failure state.
 
 ---
 
