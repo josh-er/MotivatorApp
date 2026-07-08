@@ -1,27 +1,50 @@
 # Motivator
 
-Motivator is a simple SMS app that sends daily motivational (sometimes meme) quotes to users.
+Motivator is a phone-number–driven SMS service that sends users a daily motivational message at a time they configure.
 
-## Features
-- Stores quotes in a SQLite database
-- Sends SMS messages via Twilio
-- Scheduler to send one message per day
-- Logs sent messages in a csv
+## Structure
 
-## Getting Started
-1. Clone the repo
-2. Install dependencies:
-   pip install -r requirements.txt
-3. Set up environment variables in a .env file:
-    TWILIO_ACCOUNT_SID=your_sid
-    TWILIO_AUTH_TOKEN=your_token
-    TWILIO_PHONE=+1234567890
-4. Initialize the database:
-    python init_db.py
-5. Run the scheduler:
-    python run_scheduler.py
-6. Deployment (Render)
-    Push this repo to GitHub
-    Connect it to Render as a new Web Service
-    Add environment variables in Render’s dashboard
-    Render will install from requirements.txt and run your app
+- `Motivator/` — Flask backend (API, SMS webhook, scheduler, admin panel)
+- `MotivatorUI/` — iOS app (SwiftUI)
+
+## Architecture
+
+Flask + PostgreSQL (hosted on Render), Twilio for SMS, a cron job driving the scheduler, and a SwiftUI iOS app as the signup/settings-link trigger surface. See `SPEC.md` for the full design and `PROGRESS.md` for implementation status.
+
+## Running the backend locally
+
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Set up a `.env` file with:
+
+```
+DATABASE_URL=...          # optional locally; falls back to SQLite if unset
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=...
+FLASK_SECRET_KEY=...
+ADMIN_PASSWORD=...
+ADMIN_KEY=...
+BASE_URL=http://localhost:5000
+```
+
+Run the app:
+
+```
+python3 -m Motivator.app
+```
+
+## Tests
+
+```
+pip install -r requirements-dev.txt
+pytest
+```
+
+## iOS app
+
+`MotivatorUI/` is a standard Xcode project — open it in Xcode and run. Debug builds point at `http://127.0.0.1:5000`; release builds point at the deployed Render URL.

@@ -157,8 +157,7 @@ Every decision favors determinism and auditability over UX complexity.
 
 11. Admin Panel
 11.1 Post-Launch Scope
-	•	Add-user functionality is removed at launch.
+	•	Add-user functionality must be removed before launch — the only remaining pre-launch item.
 	•	Delete, quotes management, and log viewing remain.
-	•	Log pages must surface all errors currently only visible in Render logs — this is a known gap to fix before launch.
-11.2 Known Issue: Swallowed Errors
-	•	Some errors are swallowed before reaching the admin log tables. Needs investigation and fix before launch.
+11.2 Resolved: Swallowed Errors
+	•	Errors that were previously swallowed before reaching the admin log tables have been fixed (closed during the security audit pass). Log pages now surface all error cases that were previously only visible in Render's raw logs.
