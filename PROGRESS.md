@@ -120,13 +120,16 @@ Also fixed while writing tests: four `SQLAlchemy 2.0` `Query.get()` deprecation 
 ### iOS — configurable API base URL (2026-07-07)
 `APIEndpoints.baseURL` now resolves via `#if DEBUG`/`#else`: `http://127.0.0.1:5000` for debug builds, `https://motivatorapp.onrender.com` for release builds. Uses Xcode's default `DEBUG` compilation condition on the Debug configuration — no project-settings changes needed. Both configurations verified to build clean.
 
+### iOS — 429 rate-limit message on settings-link request (2026-07-07)
+`SettingsLinkViewModel.requestSettingsLink()` now shows a user-friendly message on HTTP 429 instead of a generic failure: "A settings link was recently sent to your phone. Please wait 30 minutes before requesting another."
+
+Fixing this surfaced a latent bug: `APIClient.postJSON` never inspected the HTTP response status code at all — any non-2xx response (429 included) was reported to callers as `.success`. Added `APIError.httpStatus(Int)`; `postJSON` now checks the status code and surfaces non-2xx responses as `.failure(APIError.httpStatus(code))`. `SettingsLinkViewModel` matches on 429 specifically; `PhoneEntryViewModel`'s generic `.failure` handling is unaffected (previously-silent non-2xx failures on `/submit` are now correctly reported as "Sign up failed.").
+
 ---
 
 ## Remaining pre-launch items
 
 - **Admin add-user removal** — per SPEC.md §11.1, add-user functionality must be removed from the admin panel before launch (delete, quotes management, and log viewing remain in scope).
-- **Verify Render dashboard env vars** — confirm `FLASK_SECRET_KEY`, `ADMIN_PASSWORD`, and `ADMIN_KEY` are actually set in the Render dashboard for the web service (not just locally) — `render.yaml` doesn't declare them, and the app now refuses to start in production without the first two.
-- **429 error message copy** — the settings-link request rate limit (`POST /request-settings-link`, §5.5) returns an HTTP 429 with no user-friendly copy in the app; needs proper messaging in the iOS UI instead of a raw/generic failure state.
 
 ---
 
