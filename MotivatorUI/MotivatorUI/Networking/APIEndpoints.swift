@@ -2,7 +2,7 @@ import Foundation
 
 struct APIEndpoints {
 #if DEBUG
-    static let baseURL = "http://127.0.0.1:5000"
+    static let baseURL = "https://motivatorapp.onrender.com"
 #else
     static let baseURL = "https://motivatorapp.onrender.com"
 #endif
