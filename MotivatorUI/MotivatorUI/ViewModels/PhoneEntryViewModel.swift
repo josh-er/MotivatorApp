@@ -2,14 +2,13 @@ import Foundation
 import Combine
 
 class PhoneEntryViewModel: ObservableObject {
-    @Published var phone: String = ""
-    @Published var selectedTime: Date = Date()
-    @Published var timezone: String? = nil
-    @Published var consentChecked: Bool = false
-    @Published var message: String = ""
-    @Published var isLoading: Bool = false
+    let phoneNumber = PhoneNumberViewModel()
+    let deliveryTime = DeliveryTimeViewModel()
+    let timezone = TimezoneViewModel()
+    let consent = ConsentViewModel()
+    let submissionStatus = SubmissionStatusViewModel()
 
-    var canSubmit: Bool { consentChecked && timezone != nil }
+    var canSubmit: Bool { consent.consentChecked && timezone.timezone != nil }
 
     private let client = APIClient()
     private let onSignUpSuccess: (String) -> Void
@@ -20,37 +19,35 @@ class PhoneEntryViewModel: ObservableObject {
 
     // MARK: - Sign up flow (/submit)
     func signUp() {
+        let phone = phoneNumber.phone
+
         guard !phone.isEmpty else {
-            message = "Phone required"
+            submissionStatus.message = "Phone required"
             return
         }
-        guard let tz = timezone, consentChecked else { return }
+        guard let tz = timezone.timezone, consent.consentChecked else { return }
 
-        isLoading = true
-        message = ""
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let localTime = formatter.string(from: selectedTime)
+        submissionStatus.isLoading = true
+        submissionStatus.message = ""
 
         let body: [String: Any] = [
             "phone": phone,
-            "local_time": localTime,
+            "local_time": deliveryTime.formattedLocalTime,
             "timezone": tz,
             "consent": true,
         ]
 
         client.postJSON(url: APIEndpoints.submit, body: body) { result in
             DispatchQueue.main.async {
-                self.isLoading = false
+                self.submissionStatus.isLoading = false
 
                 switch result {
                 case .success:
                     UserDefaults.standard.set(true, forKey: "hasSignedUp")
-                    self.onSignUpSuccess(self.phone)
+                    self.onSignUpSuccess(phone)
 
                 case .failure:
-                    self.message = "Sign up failed."
+                    self.submissionStatus.message = "Sign up failed."
                 }
             }
         }

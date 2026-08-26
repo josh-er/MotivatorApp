@@ -125,6 +125,16 @@ Also fixed while writing tests: four `SQLAlchemy 2.0` `Query.get()` deprecation 
 
 Fixing this surfaced a latent bug: `APIClient.postJSON` never inspected the HTTP response status code at all — any non-2xx response (429 included) was reported to callers as `.success`. Added `APIError.httpStatus(Int)`; `postJSON` now checks the status code and surfaces non-2xx responses as `.failure(APIError.httpStatus(code))`. `SettingsLinkViewModel` matches on 429 specifically; `PhoneEntryViewModel`'s generic `.failure` handling is unaffected (previously-silent non-2xx failures on `/submit` are now correctly reported as "Sign up failed.").
 
+### iOS — `PhoneEntryViewModel` split into narrow view models (2026-08-25)
+Performance refactor: `PhoneEntryViewModel`'s 6 `@Published` properties (each edit re-rendering the entire signup form) were split into five focused `ObservableObject`s, each with its own `@Published` state:
+- `PhoneNumberViewModel` (`phone`)
+- `DeliveryTimeViewModel` (`selectedTime`, plus `formattedLocalTime` for the `HH:mm` payload string)
+- `TimezoneViewModel` (`timezone`)
+- `ConsentViewModel` (`consentChecked`)
+- `SubmissionStatusViewModel` (`message`, `isLoading`)
+
+`PhoneEntryViewModel` is now a coordinator: it owns one instance of each, exposes `canSubmit`/`signUp()`, and no longer declares any `@Published` properties of its own. `PhoneEntryView` was split to match — `PhoneNumberField`, `DeliveryTimePicker`, `TimezonePicker`, `ConsentCheckboxRow`, `SubmitButton`, and `SubmissionStatusView` are private child views, each `@ObservedObject`-bound to only the view model(s) it needs. `SubmitButton` observes `ConsentViewModel` + `TimezoneViewModel` directly (the only two that gate `canSubmit`) so the button's disabled state stays live without the parent view re-rendering. Net effect: typing in the phone field, moving the time picker, etc. now only re-renders the one field touched, not the whole form. Build verified via `xcodebuild ... build` (BUILD SUCCEEDED).
+
 ### render.yaml audit and requirements.txt cleanup (2026-07-07)
 Audited `render.yaml` against the actual repo: every `buildCommand`/`startCommand` file reference and the `databases:`/`fromDatabase` name pairing were checked for existence and consistency.
 

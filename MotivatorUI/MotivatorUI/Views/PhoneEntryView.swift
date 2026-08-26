@@ -24,43 +24,14 @@ struct PhoneEntryView: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            PhoneNumberField(vm: vm.phoneNumber)
+            DeliveryTimePicker(vm: vm.deliveryTime)
+            TimezonePicker(vm: vm.timezone)
+            ConsentCheckboxRow(vm: vm.consent)
 
-            TextField("Phone number", text: $vm.phone)
-                .textFieldStyle(.roundedBorder)
-                .keyboardType(.phonePad)
+            SubmitButton(consent: vm.consent, timezone: vm.timezone, action: vm.signUp)
 
-            DatePicker(
-                "Delivery time",
-                selection: $vm.selectedTime,
-                displayedComponents: .hourAndMinute
-            )
-            .datePickerStyle(.compact)
-
-            Picker(selection: $vm.timezone) {
-                Text("Select timezone").tag(String?.none)
-                ForEach(supportedTimezones, id: \.id) { tz in
-                    Text(tz.label).tag(Optional(tz.id))
-                }
-            } label: {
-                Text("Timezone")
-            }
-            .pickerStyle(.menu)
-
-            ConsentCheckbox(isChecked: $vm.consentChecked)
-
-            Button("Sign up") {
-                vm.signUp()
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!vm.canSubmit)
-
-            if vm.isLoading {
-                ProgressView()
-            }
-
-            Text(vm.message)
-                .font(.footnote)
-                .foregroundColor(.gray)
+            SubmissionStatusView(vm: vm.submissionStatus)
 
             Spacer()
         }
@@ -68,14 +39,53 @@ struct PhoneEntryView: View {
     }
 }
 
-private struct ConsentCheckbox: View {
-    @Binding var isChecked: Bool
+private struct PhoneNumberField: View {
+    @ObservedObject var vm: PhoneNumberViewModel
 
     var body: some View {
-        Button(action: { isChecked.toggle() }) {
+        TextField("Phone number", text: $vm.phone)
+            .textFieldStyle(.roundedBorder)
+            .keyboardType(.phonePad)
+    }
+}
+
+private struct DeliveryTimePicker: View {
+    @ObservedObject var vm: DeliveryTimeViewModel
+
+    var body: some View {
+        DatePicker(
+            "Delivery time",
+            selection: $vm.selectedTime,
+            displayedComponents: .hourAndMinute
+        )
+        .datePickerStyle(.compact)
+    }
+}
+
+private struct TimezonePicker: View {
+    @ObservedObject var vm: TimezoneViewModel
+
+    var body: some View {
+        Picker(selection: $vm.timezone) {
+            Text("Select timezone").tag(String?.none)
+            ForEach(supportedTimezones, id: \.id) { tz in
+                Text(tz.label).tag(Optional(tz.id))
+            }
+        } label: {
+            Text("Timezone")
+        }
+        .pickerStyle(.menu)
+    }
+}
+
+private struct ConsentCheckboxRow: View {
+    @ObservedObject var vm: ConsentViewModel
+
+    var body: some View {
+        Button(action: { vm.consentChecked.toggle() }) {
             HStack(alignment: .top, spacing: 10) {
-                Image(systemName: isChecked ? "checkmark.square.fill" : "square")
-                    .foregroundColor(isChecked ? .accentColor : .secondary)
+                Image(systemName: vm.consentChecked ? "checkmark.square.fill" : "square")
+                    .foregroundColor(vm.consentChecked ? .accentColor : .secondary)
                     .imageScale(.large)
                 Text("By checking this box, I agree to receive recurring automated motivational SMS messages. Msg & data rates may apply. Reply STOP to cancel.")
                     .font(.footnote)
@@ -84,5 +94,32 @@ private struct ConsentCheckbox: View {
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct SubmitButton: View {
+    @ObservedObject var consent: ConsentViewModel
+    @ObservedObject var timezone: TimezoneViewModel
+    let action: () -> Void
+
+    var body: some View {
+        Button("Sign up", action: action)
+            .buttonStyle(.borderedProminent)
+            .disabled(!(consent.consentChecked && timezone.timezone != nil))
+    }
+}
+
+private struct SubmissionStatusView: View {
+    @ObservedObject var vm: SubmissionStatusViewModel
+
+    var body: some View {
+        Group {
+            if vm.isLoading {
+                ProgressView()
+            }
+            Text(vm.message)
+                .font(.footnote)
+                .foregroundColor(.gray)
+        }
     }
 }
