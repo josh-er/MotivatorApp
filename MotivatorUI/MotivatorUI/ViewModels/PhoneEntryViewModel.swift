@@ -46,8 +46,17 @@ class PhoneEntryViewModel: ObservableObject {
                     UserDefaults.standard.set(true, forKey: "hasSignedUp")
                     self.onSignUpSuccess(phone)
 
-                case .failure:
-                    self.submissionStatus.message = "Sign up failed."
+                case .failure(let error):
+                    switch error {
+                    case APIError.httpStatus(400, "user_exists"):
+                        self.submissionStatus.message = "This number is already registered. Use the settings link below to update your preferences."
+                    case APIError.httpStatus(429, _):
+                        self.submissionStatus.message = "Too many attempts. Please try again later."
+                    case APIError.network:
+                        self.submissionStatus.message = "Couldn't connect. Check your internet connection and try again."
+                    default:
+                        self.submissionStatus.message = "Something went wrong. Please try again."
+                    }
                 }
             }
         }

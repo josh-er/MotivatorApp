@@ -185,7 +185,7 @@ def submit():
 
     except IntegrityError:
         db.rollback()
-        return jsonify({"error": "User already exists"}), 400
+        return jsonify({"error": "user_exists"}), 400
 
     finally:
         db.close()

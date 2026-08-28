@@ -32,7 +32,7 @@ class SettingsLinkViewModel: ObservableObject {
                     self.message = "If you're signed up, a settings link will be sent."
 
                 case .failure(let error):
-                    if case APIError.httpStatus(429) = error {
+                    if case APIError.httpStatus(429, _) = error {
                         self.message = "A settings link was recently sent to your phone. Please wait 30 minutes before requesting another."
                     } else {
                         self.message = "Request failed."

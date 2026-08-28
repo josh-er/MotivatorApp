@@ -37,7 +37,7 @@ def test_duplicate_phone(client, make_user):
     })
 
     assert resp.status_code == 400
-    assert resp.get_json() == {"error": "User already exists"}
+    assert resp.get_json() == {"error": "user_exists"}
 
 
 def test_missing_consent(client, db):
