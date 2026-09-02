@@ -147,6 +147,13 @@ Performance refactor: `PhoneEntryViewModel`'s 6 `@Published` properties (each ed
 
 Depends on the backend's new `user_exists` error code above.
 
+### Settings page — mobile-friendly styling (2026-09-02)
+`settings.html` rendered poorly on mobile (form in the upper-left, tiny text, required zooming). Fixed with CSS/markup-only changes — no form fields, endpoints, or backend logic touched:
+- Added the missing `<meta name="viewport" content="width=device-width, initial-scale=1">` tag.
+- Wrapped the form in a centered `.container` (max-width 420px) with larger base font size.
+- Made inputs, select, and button full-width with touch-friendly sizing (44-48px min-height).
+- Fixed the time input (`#local_time`) overflowing/cutting off on the right on narrow screens — mobile Safari sizes `input[type="time"]` by its native clock-widget content rather than respecting `width: 100%`. Added a targeted `input[type="time"] { -webkit-appearance: none; appearance: none; min-width: 0; }` rule so it honors full width like the other fields.
+
 ### render.yaml audit and requirements.txt cleanup (2026-07-07)
 Audited `render.yaml` against the actual repo: every `buildCommand`/`startCommand` file reference and the `databases:`/`fromDatabase` name pairing were checked for existence and consistency.
 
