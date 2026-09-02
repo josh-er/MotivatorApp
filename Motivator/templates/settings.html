@@ -2,18 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Update Settings</title>
   <style>
-    body { font-family: sans-serif; margin: 40px; }
-    label { display: block; margin-top: 10px; }
-    input, select { margin-top: 5px; }
-    button { margin-top: 15px; }
-    #message { margin-top: 20px; font-weight: bold; }
-    .error { color: #c0392b; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 24px 16px;
+      display: flex;
+      justify-content: center;
+      font-size: 18px;
+      line-height: 1.4;
+    }
+    .container { width: 100%; max-width: 420px; }
+    h1 { font-size: 1.5rem; text-align: center; }
+    label { display: block; margin-top: 20px; font-size: 1rem; }
+    input, select {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      font-size: 1rem;
+      min-height: 44px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      display: block;
+      width: 100%;
+      margin-top: 24px;
+      padding: 14px;
+      font-size: 1.1rem;
+      min-height: 48px;
+      border: none;
+      border-radius: 6px;
+      background: #2c7be5;
+      color: #fff;
+      cursor: pointer;
+    }
+    #message { margin-top: 20px; font-weight: bold; text-align: center; }
+    .error { color: #c0392b; text-align: center; }
     .disabled { opacity: 0.6; pointer-events: none; }
   </style>
 </head>
 <body>
+  <div class="container">
   <h1>Update Your Settings</h1>
 
   {% if error %}
@@ -80,5 +114,6 @@
     });
   </script>
   {% endif %}
+  </div>
 </body>
 </html>
