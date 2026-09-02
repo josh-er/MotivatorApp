@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-07-07
+Last updated: 2026-09-02
 
 ---
 
@@ -134,6 +134,18 @@ Performance refactor: `PhoneEntryViewModel`'s 6 `@Published` properties (each ed
 - `SubmissionStatusViewModel` (`message`, `isLoading`)
 
 `PhoneEntryViewModel` is now a coordinator: it owns one instance of each, exposes `canSubmit`/`signUp()`, and no longer declares any `@Published` properties of its own. `PhoneEntryView` was split to match — `PhoneNumberField`, `DeliveryTimePicker`, `TimezonePicker`, `ConsentCheckboxRow`, `SubmitButton`, and `SubmissionStatusView` are private child views, each `@ObservedObject`-bound to only the view model(s) it needs. `SubmitButton` observes `ConsentViewModel` + `TimezoneViewModel` directly (the only two that gate `canSubmit`) so the button's disabled state stays live without the parent view re-rendering. Net effect: typing in the phone field, moving the time picker, etc. now only re-renders the one field touched, not the whole form. Build verified via `xcodebuild ... build` (BUILD SUCCEEDED).
+
+### Backend — machine-readable `user_exists` error code (2026-09-02)
+`POST /submit`'s duplicate-phone 400 response (`app.py:188`) now returns `{"error": "user_exists"}` instead of the free-text `"User already exists"`, so clients can branch on a stable code rather than string-matching. Covered by `tests/test_submit.py`. Note: `admin/routes.py`'s add-user form still flashes the human-readable `"User already exists"` — that's a Flask `flash()` message for the admin UI, not an API response, and was left as-is.
+
+### iOS — signup error handling mapped to backend error codes (2026-09-02)
+`PhoneEntryViewModel.signUp()`'s failure branch now matches on `APIError.httpStatus` instead of showing one generic failure message for every non-2xx response:
+- `400` + `"user_exists"` → "This number is already registered. Use the settings link below to update your preferences."
+- `429` → "Too many attempts. Please try again later."
+- `APIError.network` → "Couldn't connect. Check your internet connection and try again."
+- Any other failure → "Something went wrong. Please try again." (unchanged fallback)
+
+Depends on the backend's new `user_exists` error code above.
 
 ### render.yaml audit and requirements.txt cleanup (2026-07-07)
 Audited `render.yaml` against the actual repo: every `buildCommand`/`startCommand` file reference and the `databases:`/`fromDatabase` name pairing were checked for existence and consistency.
