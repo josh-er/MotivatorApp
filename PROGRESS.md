@@ -176,6 +176,12 @@ Four related UI fixes across `PhoneEntryView` and `ReturningUserView`:
 ### iOS — `ReturningUserView` logo position matches `PhoneEntryView` (2026-09-05)
 `ReturningUserView`'s back button (`onBack`) lived inside the same `VStack(spacing: 24)` as the logo, so when a back button was shown it added a full row plus 24pt of spacing above the logo, pushing it lower than on `PhoneEntryView`. Both views already used the same `.padding(.top, 24)` on the logo itself — the discrepancy was purely from the back button consuming vertical space in the stack, not a padding mismatch. Fixed by moving the back button into a `ZStack` overlay (`alignment: .topLeading`) rendered on top of the main `VStack` instead of inside it, so its presence no longer affects the logo's position in either the back-button or no-back-button case.
 
+### iOS — replaced default system-blue accents with app color tokens (2026-09-05)
+Three controls were still rendering in the default system blue instead of the app's named colors:
+- `TimezonePicker`'s placeholder took two passes to fix. First attempt set `.foregroundColor(.accentGreenText)` directly on the `Text("Select timezone")` option — this had no effect, because `.pickerStyle(.menu)` outside a `Form`/`List` doesn't render the option `Text` views for the button's displayed title; it only reads their string content and paints that title using `.tint`, not `.foregroundColor`. Fixed by replacing that with `.tint(vm.timezone == nil ? .accentGreenText : .textPrimary)` on the `Picker` itself, so the displayed title is green while the placeholder shows and reverts to `textPrimary` once a real timezone is selected.
+- `PhoneNumberField`'s `TextField` (`PhoneEntryView` and `ReturningUserView`) now has `.tint(.textPrimary)` so the text-insertion cursor matches the field's text color instead of system blue.
+- `DeliveryTimePicker`'s compact `DatePicker` now has `.tint(.accentGreenText)`, since `.foregroundColor` alone doesn't affect the picker's accent-colored selection button.
+
 ### Settings page — mobile-friendly styling (2026-09-02)
 `settings.html` rendered poorly on mobile (form in the upper-left, tiny text, required zooming). Fixed with CSS/markup-only changes — no form fields, endpoints, or backend logic touched:
 - Added the missing `<meta name="viewport" content="width=device-width, initial-scale=1">` tag.

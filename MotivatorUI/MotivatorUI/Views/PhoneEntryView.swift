@@ -61,6 +61,7 @@ private struct PhoneNumberField: View {
     var body: some View {
         TextField("Phone number", text: $vm.phone)
             .foregroundColor(.textPrimary)
+            .tint(.textPrimary)
             .inputBordered()
             .keyboardType(.phonePad)
     }
@@ -76,6 +77,7 @@ private struct DeliveryTimePicker: View {
             displayedComponents: .hourAndMinute
         )
         .foregroundColor(.textPrimary)
+        .tint(.accentGreenText)
         .datePickerStyle(.compact)
         .inputBordered()
     }
@@ -94,6 +96,7 @@ private struct TimezonePicker: View {
             Text("Timezone")
         }
         .foregroundColor(.textPrimary)
+        .tint(vm.timezone == nil ? Color.accentGreenText : Color.textPrimary)
         .pickerStyle(.menu)
         .inputBordered()
     }

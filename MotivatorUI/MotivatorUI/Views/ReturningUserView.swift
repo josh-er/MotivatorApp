@@ -21,6 +21,7 @@ struct ReturningUserView: View {
 
                 TextField("Phone number", text: $vm.phone)
                     .foregroundColor(.textPrimary)
+                    .tint(.textPrimary)
                     .inputBordered()
                     .keyboardType(.phonePad)
 
