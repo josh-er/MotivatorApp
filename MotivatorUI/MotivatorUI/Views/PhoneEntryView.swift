@@ -29,6 +29,13 @@ struct PhoneEntryView: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 60)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 24)
+
             PhoneNumberField(vm: vm.phoneNumber)
             DeliveryTimePicker(vm: vm.deliveryTime)
             TimezonePicker(vm: vm.timezone)
@@ -43,6 +50,8 @@ struct PhoneEntryView: View {
             Spacer()
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.appBackground.ignoresSafeArea())
     }
 }
 
@@ -51,7 +60,8 @@ private struct PhoneNumberField: View {
 
     var body: some View {
         TextField("Phone number", text: $vm.phone)
-            .textFieldStyle(.roundedBorder)
+            .foregroundColor(.textPrimary)
+            .inputBordered()
             .keyboardType(.phonePad)
     }
 }
@@ -65,7 +75,9 @@ private struct DeliveryTimePicker: View {
             selection: $vm.selectedTime,
             displayedComponents: .hourAndMinute
         )
+        .foregroundColor(.textPrimary)
         .datePickerStyle(.compact)
+        .inputBordered()
     }
 }
 
@@ -81,7 +93,9 @@ private struct TimezonePicker: View {
         } label: {
             Text("Timezone")
         }
+        .foregroundColor(.textPrimary)
         .pickerStyle(.menu)
+        .inputBordered()
     }
 }
 
@@ -92,11 +106,11 @@ private struct ConsentCheckboxRow: View {
         Button(action: { vm.consentChecked.toggle() }) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: vm.consentChecked ? "checkmark.square.fill" : "square")
-                    .foregroundColor(vm.consentChecked ? .accentColor : .secondary)
+                    .foregroundColor(vm.consentChecked ? .successGreen : .textSecondary)
                     .imageScale(.large)
                 Text("By checking this box, I agree to receive recurring automated motivational SMS messages. Msg & data rates may apply. Reply STOP to cancel.")
                     .font(.footnote)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.textSecondary)
                     .multilineTextAlignment(.leading)
             }
         }
@@ -111,7 +125,7 @@ private struct SubmitButton: View {
 
     var body: some View {
         Button("Sign up", action: action)
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(PrimaryButtonStyle())
             .disabled(!(consent.consentChecked && timezone.timezone != nil))
     }
 }
@@ -123,7 +137,8 @@ private struct ReturningUserLinkButton: View {
     var body: some View {
         if !vm.showSettingsLinkPrompt {
             Button("Already signed up? Get a settings link.", action: action)
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
+                .foregroundColor(.accentGreenText)
                 .font(.footnote)
         }
     }
@@ -140,11 +155,18 @@ private struct SubmissionStatusView: View {
             }
             Text(vm.message)
                 .font(.footnote)
-                .foregroundColor(.gray)
+                .foregroundColor(vm.message.isEmpty ? .textSecondary : .errorText)
+                .padding(vm.message.isEmpty ? 0 : 8)
+                .background(vm.message.isEmpty ? Color.clear : Color.errorBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(vm.message.isEmpty ? Color.clear : Color.errorBorder, lineWidth: 1)
+                )
 
             if vm.showSettingsLinkPrompt {
                 Button("Get a settings link instead", action: onRequestReturningUser)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentGreenText)
                     .font(.footnote)
             }
         }

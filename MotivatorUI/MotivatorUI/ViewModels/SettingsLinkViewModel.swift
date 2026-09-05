@@ -5,6 +5,7 @@ class SettingsLinkViewModel: ObservableObject {
     @Published var phone: String
     @Published var message: String = ""
     @Published var isLoading: Bool = false
+    @Published var isError: Bool = false
 
     var canRequestSettingsLink: Bool { !phone.isEmpty }
 
@@ -17,6 +18,7 @@ class SettingsLinkViewModel: ObservableObject {
     func requestSettingsLink() {
         isLoading = true
         message = ""
+        isError = false
 
         let body = ["phone": phone]
 
@@ -27,6 +29,7 @@ class SettingsLinkViewModel: ObservableObject {
                 switch result {
                 case .success:
                     self.message = "If you're signed up, a settings link will be sent."
+                    self.isError = false
 
                 case .failure(let error):
                     if case APIError.httpStatus(429, _) = error {
@@ -34,6 +37,7 @@ class SettingsLinkViewModel: ObservableObject {
                     } else {
                         self.message = "Request failed."
                     }
+                    self.isError = true
                 }
             }
         }

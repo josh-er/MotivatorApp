@@ -12,6 +12,16 @@ A snapshot of where the codebase stands against SPEC.md. Written after a full au
 
 ## Completed
 
+### iOS — full styling pass on MotivatorUI (2026-09-05)
+Colors, typography, and logo only — no logic, layout structure, or copy changes.
+
+- **13 named color tokens** added to `Assets.xcassets`, each with light/dark variants: `appBackground`, `textPrimary`, `textSecondary`, `inputBorder`, `disabledBackground`, `disabledText`, `accentGreen`, `accentGreenText`, `successGreen`, `elevatedSurface`, `errorText`, `errorBorder`, `errorBackground`.
+- **`AppLogo`** (pre-existing image set with light/dark variants) added centered at the top of `PhoneEntryView`, `PostSignupInfoView`, and `ReturningUserView`.
+- **Shared styling components** added under a new `Styles/` folder: `PrimaryButtonStyle` (accentGreen/white when enabled, disabledBackground/disabledText when disabled — used by the Sign up and both Get settings link buttons) and `InputBorderModifier`/`.inputBordered()` (inputBorder-stroked rounded rect — used by all text fields and the timezone/delivery-time pickers).
+- **`SettingsLinkViewModel`** gained a minimal `isError` flag (`false` on success, `true` on failure) so its status message — shown on both `PostSignupInfoView` and `ReturningUserView` — can be styled with errorText/errorBorder/errorBackground on failure, matching the equivalent styling already possible on `PhoneEntryView`'s status message (which infers error state from a non-empty message, since success there navigates away before any message is shown).
+- Consent checkbox checked-state → successGreen; secondary/disclosure/helper text → textSecondary; card background in `PostSignupInfoView` → elevatedSurface.
+- Verified via `xcodebuild ... build` (BUILD SUCCEEDED) after each change.
+
 ### iOS — settings-link button disabled state matches signup (2026-09-05)
 - `SettingsLinkViewModel` gained a `canRequestSettingsLink` computed property (`!phone.isEmpty`), mirroring `PhoneEntryViewModel.canSubmit`'s pattern. The "Get settings link" button on both `ReturningUserView` and `PostSignupInfoView` is now `.disabled(!canRequestSettingsLink)` instead of allowing a tap on an empty phone field. The `requestSettingsLink()` guard that set `message = "Phone required"` on tap was removed, since the button can no longer be tapped in that state.
 
