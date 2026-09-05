@@ -36,6 +36,7 @@ struct PostSignupInfoView: View {
                     settingsVM.requestSettingsLink()
                 }
                 .buttonStyle(.bordered)
+                .disabled(!settingsVM.canRequestSettingsLink)
 
                 if settingsVM.isLoading {
                     ProgressView()

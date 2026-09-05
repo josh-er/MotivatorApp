@@ -17,6 +17,7 @@ struct ReturningUserView: View {
                 vm.requestSettingsLink()
             }
             .buttonStyle(.borderedProminent)
+            .disabled(!vm.canRequestSettingsLink)
 
             if vm.isLoading {
                 ProgressView()

@@ -6,6 +6,8 @@ class SettingsLinkViewModel: ObservableObject {
     @Published var message: String = ""
     @Published var isLoading: Bool = false
 
+    var canRequestSettingsLink: Bool { !phone.isEmpty }
+
     private let client = APIClient()
 
     init(phone: String = "") {
@@ -13,11 +15,6 @@ class SettingsLinkViewModel: ObservableObject {
     }
 
     func requestSettingsLink() {
-        guard !phone.isEmpty else {
-            message = "Phone required"
-            return
-        }
-
         isLoading = true
         message = ""
 

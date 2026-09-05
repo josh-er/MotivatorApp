@@ -12,6 +12,9 @@ A snapshot of where the codebase stands against SPEC.md. Written after a full au
 
 ## Completed
 
+### iOS — settings-link button disabled state matches signup (2026-09-05)
+- `SettingsLinkViewModel` gained a `canRequestSettingsLink` computed property (`!phone.isEmpty`), mirroring `PhoneEntryViewModel.canSubmit`'s pattern. The "Get settings link" button on both `ReturningUserView` and `PostSignupInfoView` is now `.disabled(!canRequestSettingsLink)` instead of allowing a tap on an empty phone field. The `requestSettingsLink()` guard that set `message = "Phone required"` on tap was removed, since the button can no longer be tapped in that state.
+
 ### Signup flow overhaul (§4)
 The original code created users via SMS START. The flow is now:
 - **New users sign up through `POST /submit`** — sends phone, `local_time`, timezone, and `consent=true`. Backend creates the user and immediately sends the TCPA compliance SMS.
