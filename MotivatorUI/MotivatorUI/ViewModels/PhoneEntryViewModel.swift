@@ -29,6 +29,7 @@ class PhoneEntryViewModel: ObservableObject {
 
         submissionStatus.isLoading = true
         submissionStatus.message = ""
+        submissionStatus.showSettingsLinkPrompt = false
 
         let body: [String: Any] = [
             "phone": phone,
@@ -50,6 +51,7 @@ class PhoneEntryViewModel: ObservableObject {
                     switch error {
                     case APIError.httpStatus(400, "user_exists"):
                         self.submissionStatus.message = "This number is already registered. Use the settings link below to update your preferences."
+                        self.submissionStatus.showSettingsLinkPrompt = true
                     case APIError.httpStatus(429, _):
                         self.submissionStatus.message = "Too many attempts. Please try again later."
                     case APIError.network:

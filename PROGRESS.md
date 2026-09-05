@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-09-02
+Last updated: 2026-09-05
 
 ---
 
@@ -149,6 +149,14 @@ Performance refactor: `PhoneEntryViewModel`'s 6 `@Published` properties (each ed
 - Any other failure → "Something went wrong. Please try again." (unchanged fallback)
 
 Depends on the backend's new `user_exists` error code above.
+
+### iOS — settings-link discoverability and navigation fixes (2026-09-05)
+Four related UI fixes across `PhoneEntryView` and `ReturningUserView`:
+
+- **Back button on `ReturningUserView`** — an optional `onBack` closure renders a "Back" chevron button at the top when supplied. `ContentView` passes it only on the link-triggered path (`showReturningUser`), not when `ReturningUserView` is shown because the user is a genuine returning user (`hasSignedUp`) — there's nothing sensible to navigate back to in that case, so no dead-end back button is shown there.
+- **No duplicate settings-link prompt** — the permanent "Already signed up? Get a settings link." link now hides itself once the contextual `user_exists` error and its own "Get a settings link instead" link appear, avoiding two links on screen at once.
+- **Settings-link buttons styled as buttons** — both the permanent link and the contextual `user_exists` link now use `.buttonStyle(.bordered)` instead of plain grey footnote text, so they read as tappable.
+- **Fix: permanent link wasn't actually hiding** — the first attempt at the hide-on-duplicate behavior above checked `vm.submissionStatus.showSettingsLinkPrompt` directly inside `PhoneEntryView.body`, but `PhoneEntryView` only holds `PhoneEntryViewModel` as `@StateObject`, which has no `@Published` properties of its own — it never re-publishes when the *nested* `submissionStatus`'s `@Published` flag changes, so that `if` was evaluated once and went stale. Fixed by extracting the link into a dedicated `ReturningUserLinkButton` view holding `@ObservedObject var vm: SubmissionStatusViewModel` directly, consistent with the narrow per-field observation pattern already used elsewhere in `PhoneEntryView` (`PhoneNumberField`, `TimezonePicker`, etc. each observe only the view model they need).
 
 ### Settings page — mobile-friendly styling (2026-09-02)
 `settings.html` rendered poorly on mobile (form in the upper-left, tiny text, required zooming). Fixed with CSS/markup-only changes — no form fields, endpoints, or backend logic touched:

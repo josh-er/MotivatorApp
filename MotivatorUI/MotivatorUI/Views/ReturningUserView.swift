@@ -2,9 +2,19 @@ import SwiftUI
 
 struct ReturningUserView: View {
     @StateObject private var vm = SettingsLinkViewModel()
+    var onBack: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 24) {
+            if let onBack {
+                HStack {
+                    Button(action: onBack) {
+                        Label("Back", systemImage: "chevron.left")
+                    }
+                    Spacer()
+                }
+            }
+
             Text("Welcome back")
                 .font(.title)
                 .bold()

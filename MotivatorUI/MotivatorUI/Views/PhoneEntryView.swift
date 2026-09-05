@@ -17,9 +17,14 @@ private let supportedTimezones: [(id: String, label: String)] = [
 
 struct PhoneEntryView: View {
     @StateObject var vm: PhoneEntryViewModel
+    let onRequestReturningUser: () -> Void
 
-    init(onSignUpSuccess: @escaping (String) -> Void = { _ in }) {
+    init(
+        onSignUpSuccess: @escaping (String) -> Void = { _ in },
+        onRequestReturningUser: @escaping () -> Void = {}
+    ) {
         _vm = StateObject(wrappedValue: PhoneEntryViewModel(onSignUpSuccess: onSignUpSuccess))
+        self.onRequestReturningUser = onRequestReturningUser
     }
 
     var body: some View {
@@ -31,7 +36,9 @@ struct PhoneEntryView: View {
 
             SubmitButton(consent: vm.consent, timezone: vm.timezone, action: vm.signUp)
 
-            SubmissionStatusView(vm: vm.submissionStatus)
+            ReturningUserLinkButton(vm: vm.submissionStatus, action: onRequestReturningUser)
+
+            SubmissionStatusView(vm: vm.submissionStatus, onRequestReturningUser: onRequestReturningUser)
 
             Spacer()
         }
@@ -109,8 +116,22 @@ private struct SubmitButton: View {
     }
 }
 
+private struct ReturningUserLinkButton: View {
+    @ObservedObject var vm: SubmissionStatusViewModel
+    let action: () -> Void
+
+    var body: some View {
+        if !vm.showSettingsLinkPrompt {
+            Button("Already signed up? Get a settings link.", action: action)
+                .buttonStyle(.bordered)
+                .font(.footnote)
+        }
+    }
+}
+
 private struct SubmissionStatusView: View {
     @ObservedObject var vm: SubmissionStatusViewModel
+    let onRequestReturningUser: () -> Void
 
     var body: some View {
         Group {
@@ -120,6 +141,12 @@ private struct SubmissionStatusView: View {
             Text(vm.message)
                 .font(.footnote)
                 .foregroundColor(.gray)
+
+            if vm.showSettingsLinkPrompt {
+                Button("Get a settings link instead", action: onRequestReturningUser)
+                    .buttonStyle(.bordered)
+                    .font(.footnote)
+            }
         }
     }
 }
