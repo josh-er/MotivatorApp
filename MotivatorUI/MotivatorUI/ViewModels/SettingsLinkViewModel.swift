@@ -7,7 +7,7 @@ class SettingsLinkViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var isError: Bool = false
 
-    var canRequestSettingsLink: Bool { !phone.isEmpty }
+    var canRequestSettingsLink: Bool { phone.filter(\.isNumber).count == 10 }
 
     private let client = APIClient()
 

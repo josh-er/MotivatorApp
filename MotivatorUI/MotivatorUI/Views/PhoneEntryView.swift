@@ -41,7 +41,7 @@ struct PhoneEntryView: View {
             TimezonePicker(vm: vm.timezone)
             ConsentCheckboxRow(vm: vm.consent)
 
-            SubmitButton(consent: vm.consent, timezone: vm.timezone, action: vm.signUp)
+            SubmitButton(phoneNumber: vm.phoneNumber, consent: vm.consent, timezone: vm.timezone, action: vm.signUp)
 
             ReturningUserLinkButton(vm: vm.submissionStatus, action: onRequestReturningUser)
 
@@ -119,6 +119,7 @@ private struct ConsentCheckboxRow: View {
 }
 
 private struct SubmitButton: View {
+    @ObservedObject var phoneNumber: PhoneNumberViewModel
     @ObservedObject var consent: ConsentViewModel
     @ObservedObject var timezone: TimezoneViewModel
     let action: () -> Void
@@ -126,7 +127,7 @@ private struct SubmitButton: View {
     var body: some View {
         Button("Sign up", action: action)
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(!(consent.consentChecked && timezone.timezone != nil))
+            .disabled(!(consent.consentChecked && timezone.timezone != nil && phoneNumber.phone.filter(\.isNumber).count == 10))
     }
 }
 

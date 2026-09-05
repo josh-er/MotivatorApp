@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-09-05
+Last updated: 2026-09-05 (later)
 
 ---
 
@@ -24,6 +24,11 @@ Colors, typography, and logo only — no logic, layout structure, or copy change
 
 ### iOS — settings-link button disabled state matches signup (2026-09-05)
 - `SettingsLinkViewModel` gained a `canRequestSettingsLink` computed property (`!phone.isEmpty`), mirroring `PhoneEntryViewModel.canSubmit`'s pattern. The "Get settings link" button on both `ReturningUserView` and `PostSignupInfoView` is now `.disabled(!canRequestSettingsLink)` instead of allowing a tap on an empty phone field. The `requestSettingsLink()` guard that set `message = "Phone required"` on tap was removed, since the button can no longer be tapped in that state.
+
+### iOS — phone validation tightened to exactly 10 digits (2026-09-05)
+Both `canRequestSettingsLink` (`SettingsLinkViewModel`) and `canSubmit` (`PhoneEntryViewModel`) previously only checked `!phone.isEmpty`, so a single stray digit (or punctuation-only input) could enable their buttons. Both now require `phone.filter(\.isNumber).count == 10` (stripping formatting characters before counting), matching the backend's 10-digit US number expectation (`normalize_phone()`, §3/§9). Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
+
+**Required a second pass**: the `canSubmit` fix above didn't actually reach the signup button. `SubmitButton` (a private child view introduced in the 2026-08-25 per-field-observation refactor) had its own local `.disabled(...)` condition — `!(consent.consentChecked && timezone.timezone != nil)` — computed independently of `vm.canSubmit` and only observing `ConsentViewModel`/`TimezoneViewModel`, since at the time of that refactor those were the only two fields gating submission. It never observed `PhoneNumberViewModel`, so the phone field's digit count had no effect on the button regardless of what `canSubmit` said. Fixed by adding `@ObservedObject var phoneNumber: PhoneNumberViewModel` to `SubmitButton` and folding the same 10-digit check into its disabled condition, and updating the call site in `PhoneEntryView.body` to pass `vm.phoneNumber` through. Lesson: after this refactor, a view model's computed `canSubmit`-style property is not sufficient on its own — every child view with its own local disabled/enabled logic must be checked and updated too.
 
 ### Signup flow overhaul (§4)
 The original code created users via SMS START. The flow is now:

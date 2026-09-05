@@ -8,7 +8,9 @@ class PhoneEntryViewModel: ObservableObject {
     let consent = ConsentViewModel()
     let submissionStatus = SubmissionStatusViewModel()
 
-    var canSubmit: Bool { consent.consentChecked && timezone.timezone != nil }
+    var canSubmit: Bool {
+        consent.consentChecked && timezone.timezone != nil && phoneNumber.phone.filter(\.isNumber).count == 10
+    }
 
     private let client = APIClient()
     private let onSignUpSuccess: (String) -> Void
