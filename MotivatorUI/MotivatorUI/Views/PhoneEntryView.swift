@@ -72,7 +72,7 @@ private struct DeliveryTimePicker: View {
 
     var body: some View {
         DatePicker(
-            "Delivery time",
+            "Select delivery time",
             selection: $vm.selectedTime,
             displayedComponents: .hourAndMinute
         )
