@@ -45,6 +45,18 @@ struct ReturningUserView: View {
                             .stroke(vm.isError ? Color.errorBorder : Color.clear, lineWidth: 1)
                     )
 
+                Divider()
+
+                VStack(spacing: 8) {
+                    Text("To stop receiving messages, reply STOP to any text from us.")
+                        .font(.footnote)
+                        .foregroundColor(.textSecondary)
+
+                    Link("Request data deletion", destination: dataDeletionURL)
+                        .font(.footnote)
+                        .foregroundColor(.accentGreenText)
+                }
+
                 Spacer()
             }
             .padding()
@@ -60,6 +72,17 @@ struct ReturningUserView: View {
                 .padding()
             }
         }
+    }
+
+    private var dataDeletionURL: URL {
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "motivatorapphelp@gmail.com"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: "Data Deletion Request"),
+            URLQueryItem(name: "body", value: "Please delete my data. My phone number is: \(vm.phone.isEmpty ? "[enter your phone number here]" : vm.phone)")
+        ]
+        return components.url ?? URL(string: "mailto:motivatorapphelp@gmail.com")!
     }
 }
 
