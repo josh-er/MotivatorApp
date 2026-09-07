@@ -5,6 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Update Settings</title>
   <style>
+    :root {
+      --bg: #F6F4ED;
+      --text-primary: #000000;
+      --text-secondary: #B4B2A9;
+      --input-border: #C7C4B9;
+      --button-bg: #3B6D11;
+      --button-text: #FFFFFF;
+      --error-text: #854F0B;
+      --error-border: #BA7517;
+      --error-bg: #FAEEDA;
+      --link-text: #3B6D11;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #26241F;
+        --text-primary: #FFFFFF;
+        --text-secondary: #B4B2A9;
+        --input-border: #C7C4B9;
+        --button-bg: #3B6D11;
+        --button-text: #FFFFFF;
+        --error-text: #FAC775;
+        --error-border: #EF9F27;
+        --error-bg: #633806;
+        --link-text: #97C459;
+      }
+    }
     * { box-sizing: border-box; }
     body {
       font-family: sans-serif;
@@ -14,10 +40,22 @@
       justify-content: center;
       font-size: 18px;
       line-height: 1.4;
+      background: var(--bg);
+      color: var(--text-primary);
     }
     .container { width: 100%; max-width: 420px; }
-    h1 { font-size: 1.5rem; text-align: center; }
-    label { display: block; margin-top: 20px; font-size: 1rem; }
+    .logo {
+      display: block;
+      height: 60px;
+      margin: 0 auto 16px;
+    }
+    .logo-dark { display: none; }
+    @media (prefers-color-scheme: dark) {
+      .logo-light { display: none; }
+      .logo-dark { display: block; }
+    }
+    h1 { font-size: 1.5rem; text-align: center; color: var(--text-primary); }
+    label { display: block; margin-top: 20px; font-size: 1rem; color: var(--text-primary); }
     input, select {
       display: block;
       width: 100%;
@@ -25,8 +63,10 @@
       padding: 12px;
       font-size: 1rem;
       min-height: 44px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--input-border);
       border-radius: 6px;
+      background: var(--bg);
+      color: var(--text-primary);
     }
     input[type="time"] {
       -webkit-appearance: none;
@@ -42,17 +82,26 @@
       min-height: 48px;
       border: none;
       border-radius: 6px;
-      background: #2c7be5;
-      color: #fff;
+      background: var(--button-bg);
+      color: var(--button-text);
       cursor: pointer;
     }
-    #message { margin-top: 20px; font-weight: bold; text-align: center; }
-    .error { color: #c0392b; text-align: center; }
+    #message { margin-top: 20px; font-weight: bold; text-align: center; color: var(--text-primary); }
+    .error {
+      color: var(--error-text);
+      text-align: center;
+      padding: 12px;
+      border: 1px solid var(--error-border);
+      background: var(--error-bg);
+      border-radius: 6px;
+    }
     .disabled { opacity: 0.6; pointer-events: none; }
   </style>
 </head>
 <body>
   <div class="container">
+  <img class="logo logo-light" src="/static/motivator_logo_light.svg" alt="Motivator logo">
+  <img class="logo logo-dark" src="/static/motivator_logo_dark.svg" alt="Motivator logo">
   <h1>Update Your Settings</h1>
 
   {% if error %}

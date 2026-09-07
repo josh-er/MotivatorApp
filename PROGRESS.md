@@ -182,6 +182,11 @@ Three controls were still rendering in the default system blue instead of the ap
 - `PhoneNumberField`'s `TextField` (`PhoneEntryView` and `ReturningUserView`) now has `.tint(.textPrimary)` so the text-insertion cursor matches the field's text color instead of system blue.
 - `DeliveryTimePicker`'s compact `DatePicker` now has `.tint(.accentGreenText)`, since `.foregroundColor` alone doesn't affect the picker's accent-colored selection button.
 
+### Settings page — color palette and logo (2026-09-07)
+`settings.html` updated to match the app's visual identity. CSS/HTML only — no form fields, endpoints, JS, or backend logic touched:
+- Light/dark mode implemented via CSS custom properties (`:root` + `prefers-color-scheme: dark` media query), covering background, text primary/secondary, input border, button background/text, and error text/border/background tokens.
+- Centered logo added at the top of the page (60px height), swapping between `motivator_logo_light.svg` and `motivator_logo_dark.svg` (pre-existing files in `Motivator/static/`) via the same media query, served from Flask's default `/static/` route.
+
 ### Settings page — mobile-friendly styling (2026-09-02)
 `settings.html` rendered poorly on mobile (form in the upper-left, tiny text, required zooming). Fixed with CSS/markup-only changes — no form fields, endpoints, or backend logic touched:
 - Added the missing `<meta name="viewport" content="width=device-width, initial-scale=1">` tag.
