@@ -203,6 +203,9 @@ Both link to: `https://docs.google.com/document/d/16zsntoWuxRf1EDgW2efdQAfmp1msy
 - Made inputs, select, and button full-width with touch-friendly sizing (44-48px min-height).
 - Fixed the time input (`#local_time`) overflowing/cutting off on the right on narrow screens — mobile Safari sizes `input[type="time"]` by its native clock-widget content rather than respecting `width: 100%`. Added a targeted `input[type="time"] { -webkit-appearance: none; appearance: none; min-width: 0; }` rule so it honors full width like the other fields.
 
+### iOS — `textSecondary` light-mode contrast fix (2026-09-07)
+`textSecondary.colorset`'s light-mode value was `#B4B2A9`, insufficient contrast against the light background. Changed to `#6B6966` (darker grey). Dark-mode value unchanged at `#B4B2A9`.
+
 ### iOS — "Manage your data" section added to ReturningUserView (2026-09-07)
 `ReturningUserView` gained a `Divider()`-separated section at the bottom of the form with two items: a `textSecondary` `.footnote` line ("To stop receiving messages, reply STOP to any text from us.") and an `accentGreenText` `.footnote` `Link` ("Request data deletion") that opens a `mailto:` URL to `motivatorapphelp@gmail.com` with subject "Data Deletion Request" and a body pre-filled with `vm.phone` (blank if the field is empty). Built via `URLComponents` (scheme `mailto`, path as the address, `subject`/`body` as query items) so special characters in the phone number are safely percent-encoded. Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
 
