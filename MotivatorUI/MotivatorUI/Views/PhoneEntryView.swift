@@ -110,19 +110,35 @@ private struct TimezonePicker: View {
 private struct ConsentCheckboxRow: View {
     @ObservedObject var vm: ConsentViewModel
 
+    private var disclosureText: AttributedString {
+        var text = AttributedString("By checking this box, I agree to receive recurring automated motivational SMS messages. Msg & data rates may apply. Reply STOP to cancel. ")
+        text.foregroundColor = .textSecondary
+
+        var link = AttributedString("Privacy Policy")
+        link.link = URL(string: "https://docs.google.com/document/d/16zsntoWuxRf1EDgW2efdQAfmp1msyqJFEbRj8hkmlxk/edit?usp=sharing")
+        link.foregroundColor = .accentGreenText
+        text.append(link)
+
+        var period = AttributedString(".")
+        period.foregroundColor = .textSecondary
+        text.append(period)
+
+        return text
+    }
+
     var body: some View {
-        Button(action: { vm.consentChecked.toggle() }) {
-            HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
+            Button(action: { vm.consentChecked.toggle() }) {
                 Image(systemName: vm.consentChecked ? "checkmark.square.fill" : "square")
                     .foregroundColor(vm.consentChecked ? .successGreen : .textSecondary)
                     .imageScale(.large)
-                Text("By checking this box, I agree to receive recurring automated motivational SMS messages. Msg & data rates may apply. Reply STOP to cancel.")
-                    .font(.footnote)
-                    .foregroundColor(.textSecondary)
-                    .multilineTextAlignment(.leading)
             }
+            .buttonStyle(.plain)
+
+            Text(disclosureText)
+                .font(.footnote)
+                .multilineTextAlignment(.leading)
         }
-        .buttonStyle(.plain)
     }
 }
 

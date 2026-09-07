@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-09-05 (later)
+Last updated: 2026-09-07
 
 ---
 
@@ -181,6 +181,9 @@ Three controls were still rendering in the default system blue instead of the ap
 - `TimezonePicker`'s placeholder took two passes to fix. First attempt set `.foregroundColor(.accentGreenText)` directly on the `Text("Select timezone")` option — this had no effect, because `.pickerStyle(.menu)` outside a `Form`/`List` doesn't render the option `Text` views for the button's displayed title; it only reads their string content and paints that title using `.tint`, not `.foregroundColor`. Fixed by replacing that with `.tint(vm.timezone == nil ? .accentGreenText : .textPrimary)` on the `Picker` itself, so the displayed title is green while the placeholder shows and reverts to `textPrimary` once a real timezone is selected.
 - `PhoneNumberField`'s `TextField` (`PhoneEntryView` and `ReturningUserView`) now has `.tint(.textPrimary)` so the text-insertion cursor matches the field's text color instead of system blue.
 - `DeliveryTimePicker`'s compact `DatePicker` now has `.tint(.accentGreenText)`, since `.foregroundColor` alone doesn't affect the picker's accent-colored selection button.
+
+### iOS — delivery-time disclaimer added (2026-09-07)
+`DeliveryTimePicker` (`PhoneEntryView.swift`) now shows a footnote-style disclaimer below the delivery time picker: "If your chosen time has already passed today, you'll receive your first message shortly." Styled `.footnote`/`.textSecondary`, left-aligned to match the other form fields. Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
 
 ### Settings page — color palette and logo (2026-09-07)
 `settings.html` updated to match the app's visual identity. CSS/HTML only — no form fields, endpoints, JS, or backend logic touched:
