@@ -260,7 +260,7 @@ def sms_inbound():
 
 
     if body == "HELP":
-        resp.message("For help, contact our support team at support@motivator.app. You receive 1 motivational SMS per day. Reply STOP to unsubscribe. Msg & data rates may apply.")
+        resp.message("For help, contact our support team at motivatorapphelp@gmail.com. You receive 1 motivational SMS per day. Reply STOP to unsubscribe. Msg & data rates may apply.")
         return str(resp)
 
     resp.message("Unknown command. Reply HELP for info.")

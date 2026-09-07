@@ -182,6 +182,12 @@ Three controls were still rendering in the default system blue instead of the ap
 - `PhoneNumberField`'s `TextField` (`PhoneEntryView` and `ReturningUserView`) now has `.tint(.textPrimary)` so the text-insertion cursor matches the field's text color instead of system blue.
 - `DeliveryTimePicker`'s compact `DatePicker` now has `.tint(.accentGreenText)`, since `.foregroundColor` alone doesn't affect the picker's accent-colored selection button.
 
+### Privacy Policy link added — iOS signup form and settings page (2026-09-07)
+- **iOS**: `ConsentCheckboxRow` (`PhoneEntryView.swift`) now builds its disclosure text as an `AttributedString` with a "Privacy Policy" run appended inline (native `.link` attribute, styled `accentGreenText`), followed by a non-linked "." run — so the paragraph reads "...Reply STOP to cancel. Privacy Policy." with only "Privacy Policy" tappable, opening the Google Doc via the environment's `openURL`. This required splitting the row's tap target: the checkbox icon is now its own `Button` (tap to toggle), while the paragraph `Text` beside it is unbuttoned so the inline link can receive its own tap — tapping elsewhere in the paragraph text no longer toggles the checkbox (previously the whole row did).
+- **Settings page**: `settings.html` gained a centered "Privacy Policy" link at the bottom of the page (outside the error/form conditional, so it always renders), styled via a new `.privacy-link` class reusing the existing `--link-text` CSS variable (already the same accent-green light/dark values as the app's `accentGreenText`). Links to the same Google Doc URL as iOS, opens in a new tab.
+
+Both link to: `https://docs.google.com/document/d/16zsntoWuxRf1EDgW2efdQAfmp1msyqJFEbRj8hkmlxk/edit?usp=sharing`.
+
 ### iOS — delivery-time disclaimer added (2026-09-07)
 `DeliveryTimePicker` (`PhoneEntryView.swift`) now shows a footnote-style disclaimer below the delivery time picker: "If your chosen time has already passed today, you'll receive your first message shortly." Styled `.footnote`/`.textSecondary`, left-aligned to match the other form fields. Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
 
@@ -196,6 +202,9 @@ Three controls were still rendering in the default system blue instead of the ap
 - Wrapped the form in a centered `.container` (max-width 420px) with larger base font size.
 - Made inputs, select, and button full-width with touch-friendly sizing (44-48px min-height).
 - Fixed the time input (`#local_time`) overflowing/cutting off on the right on narrow screens — mobile Safari sizes `input[type="time"]` by its native clock-widget content rather than respecting `width: 100%`. Added a targeted `input[type="time"] { -webkit-appearance: none; appearance: none; min-width: 0; }` rule so it honors full width like the other fields.
+
+### HELP SMS support email updated (2026-09-07)
+`app.py`'s SMS `HELP` reply (`app.py:263`) referenced `support@motivator.app`, an address that isn't set up. Changed to `motivatorapphelp@gmail.com`. This was the only occurrence in the codebase.
 
 ### render.yaml audit and requirements.txt cleanup (2026-07-07)
 Audited `render.yaml` against the actual repo: every `buildCommand`/`startCommand` file reference and the `databases:`/`fromDatabase` name pairing were checked for existence and consistency.
