@@ -80,6 +80,11 @@ private struct DeliveryTimePicker: View {
         .tint(.accentGreenText)
         .datePickerStyle(.compact)
         .inputBordered()
+
+        Text("If your chosen time has already passed today, you'll receive your first message shortly.")
+            .font(.footnote)
+            .foregroundColor(.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
