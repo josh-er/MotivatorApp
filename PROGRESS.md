@@ -232,6 +232,12 @@ Several `Text` elements were being clipped to one line in the TestFlight build d
 
 Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
 
+### iOS — `PhoneEntryView` keyboard behavior fixes (2026-09-10)
+- **Scrollable form** — the form's `VStack` is now wrapped in a `ScrollView` so the logo and bottom elements (submit button, settings-link prompt, status message) are no longer hidden behind the keyboard when a field is focused; the user can scroll to reach them.
+- **Tap-to-dismiss keyboard** — an `.onTapGesture` on the `ScrollView` calls `resignFirstResponder` via `UIApplication.shared.sendAction`, dismissing the keyboard when tapping outside the phone number field. Required adding `import UIKit` to the file.
+
+Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
+
 ---
 
 ## Remaining pre-launch items

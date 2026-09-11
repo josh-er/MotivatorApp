@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private let supportedTimezones: [(id: String, label: String)] = [
     ("America/New_York",             "Eastern (New York)"),
@@ -28,30 +29,34 @@ struct PhoneEntryView: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 60)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 24)
+        ScrollView {
+            VStack(spacing: 24) {
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 60)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 24)
 
-            PhoneNumberField(vm: vm.phoneNumber)
-            DeliveryTimePicker(vm: vm.deliveryTime)
-            TimezonePicker(vm: vm.timezone)
-            ConsentCheckboxRow(vm: vm.consent)
+                PhoneNumberField(vm: vm.phoneNumber)
+                DeliveryTimePicker(vm: vm.deliveryTime)
+                TimezonePicker(vm: vm.timezone)
+                ConsentCheckboxRow(vm: vm.consent)
 
-            SubmitButton(phoneNumber: vm.phoneNumber, consent: vm.consent, timezone: vm.timezone, action: vm.signUp)
+                SubmitButton(phoneNumber: vm.phoneNumber, consent: vm.consent, timezone: vm.timezone, action: vm.signUp)
 
-            ReturningUserLinkButton(vm: vm.submissionStatus, action: onRequestReturningUser)
+                ReturningUserLinkButton(vm: vm.submissionStatus, action: onRequestReturningUser)
 
-            SubmissionStatusView(vm: vm.submissionStatus, onRequestReturningUser: onRequestReturningUser)
-
-            Spacer()
+                SubmissionStatusView(vm: vm.submissionStatus, onRequestReturningUser: onRequestReturningUser)
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
         }
-        .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.appBackground.ignoresSafeArea())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
     }
 }
 
