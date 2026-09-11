@@ -38,6 +38,8 @@ struct ReturningUserView: View {
                 Text(vm.message)
                     .font(.footnote)
                     .foregroundColor(vm.isError ? .errorText : .textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(vm.isError ? 8 : 0)
                     .background(vm.isError ? Color.errorBackground : Color.clear)
                     .overlay(

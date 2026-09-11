@@ -224,6 +224,14 @@ Audited `render.yaml` against the actual repo: every `buildCommand`/`startComman
 - Web service's `gunicorn Motivator.app:app` target confirmed valid (`app = Flask(__name__)` at `app.py:53`).
 - **`requirements.txt` — removed `APScheduler` and `PyJWT`**, both unused: grepped clean across `Motivator/`, `tests/`, `scripts/`, `migrations/`. `scheduler.py` implements its own polling loop rather than using APScheduler; settings tokens (`utils/tokens.py`) use `hashlib`/`secrets`, not JWT.
 
+### iOS — TestFlight text truncation fix (2026-09-10)
+Several `Text` elements were being clipped to one line in the TestFlight build despite no explicit `.lineLimit(1)` — SwiftUI's default layout was compressing them inside their parent `VStack`s. Added `.fixedSize(horizontal: false, vertical: true)` to force full vertical growth:
+- `PhoneEntryView.swift` — `DeliveryTimePicker`'s disclaimer text below the delivery time picker.
+- `PhoneEntryView.swift` — `ConsentCheckboxRow`'s TCPA disclosure text.
+- `ReturningUserView.swift` — the status/error message `Text(vm.message)` (covers both the success message after requesting a settings link and error messages like the 30-minute rate-limit text); also added `.multilineTextAlignment(.center)` since it's centered in the layout.
+
+Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
+
 ---
 
 ## Remaining pre-launch items

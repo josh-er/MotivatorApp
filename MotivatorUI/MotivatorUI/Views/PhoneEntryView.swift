@@ -84,6 +84,7 @@ private struct DeliveryTimePicker: View {
         Text("If your chosen time has already passed today, you'll receive your first message shortly.")
             .font(.footnote)
             .foregroundColor(.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -138,6 +139,7 @@ private struct ConsentCheckboxRow: View {
             Text(disclosureText)
                 .font(.footnote)
                 .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
