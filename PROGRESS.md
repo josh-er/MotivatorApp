@@ -217,6 +217,9 @@ Follow-up: when `vm.phone` is empty, the body now shows the placeholder "[enter 
 ### HELP SMS support email updated (2026-09-07)
 `app.py`'s SMS `HELP` reply (`app.py:263`) referenced `support@motivator.app`, an address that isn't set up. Changed to `motivatorapphelp@gmail.com`. This was the only occurrence in the codebase.
 
+### HELP handler no longer sends an app-level reply (2026-09-23)
+`app.py`'s SMS `HELP` handler (`app.py:262-263`) now returns an empty TwiML response instead of composing its own message, matching the existing `STOP` handler's pattern. Twilio handles `HELP` natively via its keyword configuration, so the app-level reply was redundant — it fixed a double-response bug where users received two separate HELP replies (one from Twilio, one from the app). Checked `tests/test_sms_inbound.py` and the rest of `tests/` for a test asserting on the old HELP message text; none existed. Full suite re-run: 35 passed.
+
 ### render.yaml audit and requirements.txt cleanup (2026-07-07)
 Audited `render.yaml` against the actual repo: every `buildCommand`/`startCommand` file reference and the `databases:`/`fromDatabase` name pairing were checked for existence and consistency.
 
