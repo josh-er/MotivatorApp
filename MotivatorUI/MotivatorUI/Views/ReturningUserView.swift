@@ -3,6 +3,7 @@ import SwiftUI
 struct ReturningUserView: View {
     @StateObject private var vm = SettingsLinkViewModel()
     var onBack: (() -> Void)? = nil
+    var onStartOver: (() -> Void)? = nil
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -60,6 +61,13 @@ struct ReturningUserView: View {
                 }
 
                 Spacer()
+
+                if let onStartOver {
+                    Button("Wrong number? Start over", action: onStartOver)
+                        .buttonStyle(.plain)
+                        .font(.footnote)
+                        .foregroundColor(.textSecondary)
+                }
             }
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity)

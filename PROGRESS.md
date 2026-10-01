@@ -1,6 +1,6 @@
 # Motivator — Implementation Progress
 
-Last updated: 2026-09-07
+Last updated: 2026-09-30
 
 ---
 
@@ -240,6 +240,9 @@ Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
 - **Tap-to-dismiss keyboard** — an `.onTapGesture` on the `ScrollView` calls `resignFirstResponder` via `UIApplication.shared.sendAction`, dismissing the keyboard when tapping outside the phone number field. Required adding `import UIKit` to the file.
 
 Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
+
+### iOS — "Wrong number? Start over" escape hatch (2026-09-30)
+Previously nothing ever reset `hasSignedUp`, so a user who signed up with the wrong number was stuck on `ReturningUserView` (no back button) and could only recover by deleting and reinstalling the app. `PostSignupInfoView` and `ReturningUserView` now show a "Wrong number? Start over" button at the bottom of the screen, below the other content (after the `Spacer()`), styled as a plain `.footnote`/`textSecondary` link. Both take an `onStartOver` closure; `ContentView.startOver()` sets `hasSignedUp = false` (via `@AppStorage`, i.e. UserDefaults), clears `justSignedUpPhone` and `showReturningUser`, and routes back to `PhoneEntryView`. `ReturningUserView`'s `onStartOver` is optional and is only passed on the `hasSignedUp` path. The link-triggered path (`showReturningUser`) already has a Back button and no signup to undo. Client-side only: the wrong number stays registered on the backend and keeps getting texts until it replies STOP or support deletes it. Verified via `xcodebuild ... build` (BUILD SUCCEEDED).
 
 ---
 

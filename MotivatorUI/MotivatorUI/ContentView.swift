@@ -14,11 +14,11 @@ struct ContentView: View {
 
     var body: some View {
         if let phone = justSignedUpPhone {
-            PostSignupInfoView(phone: phone)
+            PostSignupInfoView(phone: phone, onStartOver: startOver)
         } else if showReturningUser {
             ReturningUserView(onBack: { showReturningUser = false })
         } else if hasSignedUp {
-            ReturningUserView()
+            ReturningUserView(onStartOver: startOver)
         } else {
             PhoneEntryView(
                 onSignUpSuccess: { phone in
@@ -29,6 +29,12 @@ struct ContentView: View {
                 }
             )
         }
+    }
+
+    private func startOver() {
+        hasSignedUp = false
+        justSignedUpPhone = nil
+        showReturningUser = false
     }
 }
 

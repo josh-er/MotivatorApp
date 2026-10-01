@@ -2,9 +2,11 @@ import SwiftUI
 
 struct PostSignupInfoView: View {
     @StateObject private var settingsVM: SettingsLinkViewModel
+    private let onStartOver: () -> Void
 
-    init(phone: String) {
+    init(phone: String, onStartOver: @escaping () -> Void = {}) {
         _settingsVM = StateObject(wrappedValue: SettingsLinkViewModel(phone: phone))
+        self.onStartOver = onStartOver
     }
 
     var body: some View {
@@ -67,6 +69,11 @@ struct PostSignupInfoView: View {
             .cornerRadius(12)
 
             Spacer()
+
+            Button("Wrong number? Start over", action: onStartOver)
+                .buttonStyle(.plain)
+                .font(.footnote)
+                .foregroundColor(.textSecondary)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
