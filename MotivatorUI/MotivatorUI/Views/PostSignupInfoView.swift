@@ -41,6 +41,7 @@ struct PostSignupInfoView: View {
 
                 TextField("Phone number", text: $settingsVM.phone)
                     .foregroundColor(.textPrimary)
+                    .tint(.textPrimary)
                     .inputBordered()
                     .keyboardType(.phonePad)
 
